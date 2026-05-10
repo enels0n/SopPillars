@@ -1,0 +1,17 @@
+name: ${project.name}
+main: net.enelson.soppillars.SopPillarsPlugin
+version: ${project.version}
+authors: [E_NeLsOn]
+api-version: 1.16
+softdepend: [SopLib, SopParty, PlaceholderAPI]
+commands:
+  pillars:
+    aliases: [soppillars]
+    usage: /pillars
+permissions:
+  soppillars.admin:
+    default: op
+  soppillars.play:
+    default: true
+  soppillars.stats:
+    default: true

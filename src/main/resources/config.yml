@@ -1,0 +1,184 @@
+messages:
+  prefix: "&6SopPillars &8| &r"
+  no-permission: "&cYou do not have permission to do this."
+  arena-list: "&eArenas: &f%arenas%"
+  help-1: "&e/pillars create <name> <mode> <teams> <players per team>"
+  help-2: "&e/pillars edit <arena>"
+  help-3: "&e/pillars save"
+  help-4: "&e/pillars cancel <arena>"
+  help-5: "&e/pillars delete <arena>"
+  help-6: "&e/pillars pos1"
+  help-7: "&e/pillars pos2"
+  help-8: "&e/pillars lobbypos1"
+  help-9: "&e/pillars lobbypos2"
+  help-10: "&e/pillars setspawn <team> <player>"
+  help-11: "&e/pillars setspectator"
+  help-12: "&e/pillars setendspawn"
+  help-13: "&e/pillars list"
+  help-14: "&e/pillars join <arena>"
+  help-15: "&e/pillars random [mode,mode...]"
+  help-16: "&e/pillars kits"
+  help-17: "&e/pillars stats [player]"
+  help-18: "&e/pillars settings"
+  help-19: "&e/pillars cosmetics"
+  help-20: "&e/pillars reload"
+  help-21: "&e/pillars setlobbyspawn"
+  help-22: "&e/pillars setglobalspawn"
+  help-23: "&e/pillars kitadd <kit>"
+  help-24: "&e/pillars kitremove <kit> <slot|all>"
+  usage-create: "&eUsage: /pillars create <name> <mode> <teams> <players per team>"
+  usage-edit: "&eUsage: /pillars edit <arena>"
+  usage-cancel: "&eUsage: /pillars cancel <arena>"
+  usage-delete: "&eUsage: /pillars delete <arena>"
+  usage-join: "&eUsage: /pillars join <arena>"
+  usage-setspawn: "&eUsage: /pillars setspawn <team> <player>"
+  usage-kitadd: "&eUsage: /pillars kitadd <kit>"
+  usage-kitremove: "&eUsage: /pillars kitremove <kit> <slot|all>"
+  reload-success: "&aSopPillars reloaded."
+  reload-failed: "&cFailed to reload SopPillars. Check the console."
+  create-invalid-teams: "&cTeams must be >= 2 and players per team must be >= 1."
+  create-arena-exists: "&cArena &f%arena% &calready exists."
+  editor-enter: "&aYou are now editing arena &f%arena%&a."
+  editor-save: "&aArena &f%arena% &ahas been saved."
+  editor-cancel: "&eEditing for arena &f%arena% &ehas been cancelled."
+  arena-created: "&aArena &f%arena% &ahas been created."
+  arena-missing: "&cArena &f%arena% &cwas not found."
+  arena-deleted: "&aArena &f%arena% &ahas been removed."
+  arena-delete-busy: "&cArena &f%arena% &cis in use, being edited, or has players — stop the match first."
+  not-player: "&cOnly players can use this command."
+  arena-list-empty: "&eNo arenas have been created yet."
+  not-editing: "&cYou are not editing any arena right now."
+  gameplay-pos1-set: "&aGameplay pos1 set for arena &f%arena%&a."
+  gameplay-pos2-set: "&aGameplay pos2 set for arena &f%arena%&a."
+  gameplay-area-saved: "&aGameplay area saved for arena &f%arena%&a."
+  lobby-pos1-set: "&aLobby pos1 set for arena &f%arena%&a."
+  lobby-pos2-set: "&aLobby pos2 set for arena &f%arena%&a."
+  lobby-area-saved: "&aLobby area saved for arena &f%arena%&a."
+  spawn-set: "&aSpawn set for team &f%team%&a, player &f%player%&a in arena &f%arena%&a."
+  spectator-spawn-set: "&aSpectator spawn set for arena &f%arena%&a."
+  end-spawn-set: "&aPost-game spawn set for arena &f%arena%&a."
+  lobby-spawn-set: "&aLobby teleport point set for arena &f%arena%&a."
+  global-spawn-set: "&aGlobal spawn updated."
+  invalid-team-slot: "&cInvalid team or player slot for this arena."
+  snapshot-saved: "&aBaseline snapshot saved for arena &f%arena%&a (rollback after matches)."
+  snapshot-failed: "&cCould not save baseline snapshot for arena &f%arena%&c (check gameplay region and console)."
+  arena-build-denied: "&cYou cannot build here unless this arena is in edit mode and you are the editor."
+  stats-self: "&eGames: &f%games% &e| Wins: &f%wins% &e| Kills: &f%kills% &e| Deaths: &f%deaths%"
+  stats-other: "&eStats for &f%player%&e: Games &f%games% &e| Wins &f%wins% &e| Kills &f%kills% &e| Deaths &f%deaths%"
+  stats-player-online: "&cPlayer must be online."
+  gameplay-world-mismatch: "&cGameplay area points must be in the same world."
+  lobby-world-mismatch: "&cLobby area points must be in the same world."
+  party-member-offline: "&cNot everyone in your group is online."
+  party-member-no-permission: "&cParty member &f%player% &cdoes not have permission to play this mode."
+  party-join-not-leader: "&cOnly the party leader can queue the whole group for SopPillars."
+  party-reserved-elsewhere: "&cYour party is already reserved elsewhere (%reservation%). Leave that activity first."
+  party-does-not-fit: "&cThis arena cannot fit your whole group into teams right now."
+  spectator-no-build: "&cSpectators cannot modify blocks."
+  spectator-no-interact: "&cSpectators cannot do that during the match."
+  match-build-place-denied: "&cPlacing blocks is disabled for this arena."
+  match-build-break-map-denied: "&cBreaking arena blocks is disabled for this arena."
+  match-build-break-player-denied: "&cBreaking player-built blocks is disabled for this arena."
+  arena-not-joinable: "&cArena &f%arena% &cis not joinable right now."
+  arena-no-lobby: "&cArena &f%arena% &chas no lobby area configured yet."
+  already-in-arena: "&eYou are already in arena &f%arena%&e."
+  already-in-other-arena: "&cYou are already waiting in another arena."
+  arena-full: "&cArena &f%arena% &cis full."
+  joined-arena: "&aYou joined arena &f%arena%&a and were placed into team &f%team%&a."
+  no-random-arena: "&eNo suitable arena was found right now."
+  not-in-arena: "&eYou are not waiting in any arena."
+  left-arena: "&eYou left the waiting arena."
+  left-waiting-disconnect: "&7You disconnected while waiting in an arena."
+  quit-match-alive-disconnect: "&7You disconnected during arena &f%arena% &7(as a player)."
+  quit-match-spectator-disconnect: "&7You disconnected as a spectator of arena &f%arena%&7."
+  team-full: "&cThat team is already full."
+  team-selected: "&aYou switched to team &f%team% &ain arena &f%arena%&a."
+  countdown-started: "&eArena &f%arena% &ewill start in &f%seconds% &eseconds."
+  countdown-tick: "&eMatch starts in &f%seconds%&e..."
+  countdown-cancelled: "&cCountdown cancelled. Not enough players or teams anymore."
+  match-started: "&aArena &f%arena% &ahas started."
+  match-start-failed-missing-spawns: "&cArena &f%arena% &ccannot start yet. Some player spawns are missing."
+  cages-opened: "&aThe cages opened. Fight!"
+  kit-none-available: "&eNo kits are available for you right now."
+  kit-selected: "&aSelected kit: &f%kit%&a."
+  kit-missing: "&cKit &f%kit% &cwas not found."
+  kit-hand-empty: "&cHold an item in your main hand first."
+  kit-item-added: "&aHeld item added to kit &f%kit%&a."
+  kit-item-removed: "&aRemoved item slot &f%slot% &afrom kit &f%kit%&a."
+  kit-items-cleared: "&aRemoved all items from kit &f%kit%&a."
+  kit-remove-index-invalid: "&cInvalid kit item slot. Use /pillars kitremove <kit> <slot|all>."
+  player-died: "&c%player% &7died."
+  death-pvp: "&c%player% &7(Team %team%) was slain by &f%killer% &7— &f%arena%"
+  death-pvp-void: "&c%player% &7(Team %team%) was knocked into the void by &f%killer% &7— &f%arena%"
+  death-pvp-fall: "&c%player% &7(Team %team%) was knocked down by &f%killer% &7— &f%arena%"
+  death-pvp-lava: "&c%player% &7(Team %team%) burned thanks to &f%killer% &7— &f%arena%"
+  death-pvp-fire: "&c%player% &7(Team %team%) burned thanks to &f%killer% &7— &f%arena%"
+  death-pvp-projectile: "&c%player% &7(Team %team%) was shot by &f%killer% &7— &f%arena%"
+  death-by-mob: "&c%player% &7(Team %team%) was killed by &f%mob% &7— &f%arena%"
+  death-void: "&c%player% &7(Team %team%) fell into the void — &f%arena%"
+  death-fall: "&c%player% &7(Team %team%) fell from a high place — &f%arena%"
+  death-lava: "&c%player% &7(Team %team%) tried to swim in lava — &f%arena%"
+  death-fire: "&c%player% &7(Team %team%) burned — &f%arena%"
+  death-starvation: "&c%player% &7(Team %team%) starved — &f%arena%"
+  death-drown: "&c%player% &7(Team %team%) drowned — &f%arena%"
+  death-suffocate: "&c%player% &7(Team %team%) suffocated — &f%arena%"
+  death-environment: "&c%player% &7(Team %team%) died — &f%arena%"
+  team-eliminated: "&cTeam &f%team% &chas been eliminated."
+  match-won: "&aTeam &f%team% &awon arena &f%arena%&a."
+  match-ended-no-winner: "&eArena &f%arena% &eended with no winner."
+  match-forfeit: "&cYou forfeited arena &f%arena%&c."
+  became-spectator: "&7You are now a spectator."
+  command-blocked: "&cThat command is blocked during the match."
+  returned-to-lobby: "&eYou cannot leave the lobby before the match starts."
+  spectator-bounds: "&eSpectators cannot leave the match area."
+  chat:
+    waiting-format: "&8[&eWAIT&8] &f%player%&8: &7%message%"
+    alive-format: "&8[&aLIVE&8] &f%player%&8: &f%message%"
+    spectator-format: "&8[&7SPEC&8] &7%player%&8: &7%message%"
+    celebration-format: "&8[&6WIN&8] &f%player%&8: &f%message%"
+
+settings:
+  # Cancel NATURAL / JOCKEY / PATROL mob spawns inside arena lobby or gameplay cuboids.
+  block-natural-spawns-in-arenas: true
+  default-countdown-seconds: 10
+  default-cage-seconds: 5
+  default-pre-border-delay-seconds: 30
+  default-border-shrink-seconds: 120
+  default-end-border-diameter: 12.0
+  default-lava-enabled: false
+  default-lava-start-delay-seconds: 90
+  default-lava-rise-interval-seconds: 10
+  default-post-shrink-end-delay-seconds: 30
+  default-min-players: 2
+  default-min-filled-teams: 2
+  default-allow-place-blocks: true
+  default-allow-break-original-blocks: false
+  default-allow-break-player-blocks: true
+  default-allow-smooth-fall: false
+  default-smooth-fall-seconds: 10
+  default-friendly-fire: false
+  default-loot-enabled: true
+  default-loot-interval-seconds: 8
+  default-loot-whitelist: []
+  # Blacklist loot mode only: material names to exclude from rolls (e.g. BEDROCK, COMMAND_BLOCK). Empty = no exclusions except spawn/potion/book toggles below.
+  default-loot-blacklist: []
+  default-celebration-seconds: 10
+  # Console commands after a win; run once per player on the winning team. Placeholders: %player%, {player}, %uuid%, %arena%, %team%
+  default-victory-commands: []
+  default-allowed-commands:
+    - "msg"
+    - "r"
+  global-spawn:
+    world: "world"
+    x: 0.0
+    y: 69.0
+    z: 0.0
+    yaw: 0.0
+    pitch: 0.0
+
+paths:
+  arenas-folder: "arenas"
+  cages-folder: "cages"
+  cosmetics-folder: "cosmetics"
+  kits-folder: "kits"
+  snapshots-folder: "snapshots"
+  arena-edit-backups-folder: "arena-edit-backups"
