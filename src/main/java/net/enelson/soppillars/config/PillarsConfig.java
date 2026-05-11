@@ -58,6 +58,7 @@ public final class PillarsConfig {
         );
         this.defaultArenaSettings.setLootEnabled(plugin.getConfig().getBoolean("settings.default-loot-enabled", true));
         this.defaultArenaSettings.setLootIntervalSeconds(plugin.getConfig().getInt("settings.default-loot-interval-seconds", 8));
+        this.defaultArenaSettings.setBlacklistMode(plugin.getConfig().getBoolean("settings.default-loot-blacklist-mode", false));
         this.defaultArenaSettings.setLootWhitelist(new ArrayList<String>(plugin.getConfig().getStringList("settings.default-loot-whitelist")));
         this.defaultArenaSettings.setLootBlacklist(new ArrayList<String>(plugin.getConfig().getStringList("settings.default-loot-blacklist")));
         this.defaultArenaSettings.setSmoothFallSeconds(plugin.getConfig().getInt("settings.default-smooth-fall-seconds", 10));

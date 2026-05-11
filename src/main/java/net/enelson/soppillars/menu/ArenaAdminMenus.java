@@ -20,6 +20,7 @@ import java.util.Locale;
 public final class ArenaAdminMenus {
 
     public static final String SETTINGS_TITLE = ChatColor.DARK_BLUE + "SopPillars settings";
+    public static final String GLOBAL_SETTINGS_TITLE = ChatColor.DARK_BLUE + "SopPillars global settings";
     public static final String COSMETICS_TITLE = ChatColor.DARK_PURPLE + "SopPillars cosmetics";
 
     private ArenaAdminMenus() {
@@ -28,6 +29,12 @@ public final class ArenaAdminMenus {
     public static void openSettings(SopPillarsPlugin plugin, Player player, PillarsArena arena) {
         Inventory inventory = Bukkit.createInventory(null, 27, SETTINGS_TITLE);
         fillSettings(plugin, inventory, arena);
+        player.openInventory(inventory);
+    }
+
+    public static void openGlobalSettings(SopPillarsPlugin plugin, Player player) {
+        Inventory inventory = Bukkit.createInventory(null, 27, GLOBAL_SETTINGS_TITLE);
+        fillGlobalSettings(plugin, inventory);
         player.openInventory(inventory);
     }
 
@@ -106,6 +113,21 @@ public final class ArenaAdminMenus {
             case 17:
                 settings.setSmoothFallSeconds(adjustInt(settings.getSmoothFallSeconds(), rightClick, delta, 1));
                 break;
+            case 18:
+                settings.setMinPlayers(Math.min(arena.getMaxPlayers(), adjustInt(settings.getMinPlayers(), rightClick, delta, 1)));
+                break;
+            case 19:
+                settings.setMinFilledTeams(Math.min(arena.getTeams(), adjustInt(settings.getMinFilledTeams(), rightClick, delta, 1)));
+                break;
+            case 20:
+                plugin.getLootListEditorManager().openArenaWhitelist(player, arena);
+                return;
+            case 21:
+                plugin.getLootListEditorManager().openArenaBlacklist(player, arena);
+                return;
+            case 22:
+                openGlobalSettings(plugin, player);
+                return;
             default:
                 return;
         }
@@ -123,7 +145,7 @@ public final class ArenaAdminMenus {
         inventory.setItem(3, toggleRow(Material.DIAMOND_SWORD, "Friendly fire", s.isFriendlyFire()));
         inventory.setItem(4, toggleRow(Material.LAVA_BUCKET, "Lava rises during match", s.isLavaEnabled()));
         inventory.setItem(5, toggleRow(Material.FEATHER, "Slow fall after cages open", s.isAllowSmoothFall()));
-        inventory.setItem(6, toggleRow(Material.BOOK, "Loot blacklist mode (vs whitelist)", s.isBlacklistMode()));
+        inventory.setItem(6, lootModeRow(s.isBlacklistMode()));
         inventory.setItem(7, timingRow(Material.CLOCK, "Countdown (sec)", s.getCountdownSeconds()));
         inventory.setItem(8, timingRow(Material.GLASS, "Cage duration (sec)", s.getCageSeconds()));
         inventory.setItem(9, timingRow(Material.IRON_BARS, "Pre-border delay (sec)", s.getPreBorderDelaySeconds()));
@@ -135,10 +157,58 @@ public final class ArenaAdminMenus {
         inventory.setItem(15, timingRow(Material.CHEST, "Loot interval (sec)", s.getLootIntervalSeconds()));
         inventory.setItem(16, timingRow(Material.TOTEM_OF_UNDYING, "Celebration time (sec)", s.getCelebrationSeconds()));
         inventory.setItem(17, timingRow(Material.FEATHER, "Slow fall duration (sec)", s.getSmoothFallSeconds()));
-        for (int slot = 18; slot <= 25; slot++) {
+        inventory.setItem(18, timingRow(Material.PLAYER_HEAD, "Min players to start", s.getMinPlayers()));
+        inventory.setItem(19, timingRow(Material.WHITE_BANNER, "Min filled teams", s.getMinFilledTeams()));
+        inventory.setItem(20, editorRow(Material.LIME_SHULKER_BOX, "Edit arena whitelist"));
+        inventory.setItem(21, editorRow(Material.BLACK_SHULKER_BOX, "Edit arena blacklist"));
+        inventory.setItem(22, editorRow(Material.NETHER_STAR, "Open global loot settings"));
+        for (int slot = 23; slot <= 25; slot++) {
             inventory.setItem(slot, filler());
         }
         inventory.setItem(26, infoBook(plugin, arena));
+    }
+
+    public static void handleGlobalSettingsClick(SopPillarsPlugin plugin, Player player, int slot) {
+        switch (slot) {
+            case 0:
+                boolean blacklistMode = plugin.getConfig().getBoolean("settings.default-loot-blacklist-mode", false);
+                plugin.getConfig().set("settings.default-loot-blacklist-mode", !blacklistMode);
+                plugin.saveConfig();
+                plugin.getPillarsConfig().reload();
+                break;
+            case 1:
+                plugin.getLootListEditorManager().openGlobalWhitelist(player);
+                return;
+            case 2:
+                plugin.getLootListEditorManager().openGlobalBlacklist(player);
+                return;
+            default:
+                return;
+        }
+        if (GLOBAL_SETTINGS_TITLE.equals(player.getOpenInventory().getTitle())) {
+            fillGlobalSettings(plugin, player.getOpenInventory().getTopInventory());
+        }
+    }
+
+    private static void fillGlobalSettings(SopPillarsPlugin plugin, Inventory inventory) {
+        boolean blacklistMode = plugin.getConfig().getBoolean("settings.default-loot-blacklist-mode", false);
+        inventory.setItem(0, lootModeRow(blacklistMode));
+        inventory.setItem(1, editorRow(Material.LIME_SHULKER_BOX, "Edit global whitelist"));
+        inventory.setItem(2, editorRow(Material.BLACK_SHULKER_BOX, "Edit global blacklist"));
+        for (int slot = 3; slot <= 25; slot++) {
+            inventory.setItem(slot, filler());
+        }
+        ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
+        ItemMeta meta = book.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.AQUA + "Global defaults");
+            meta.setLore(Arrays.asList(
+                    ChatColor.GRAY + "Used for new arenas and defaults.",
+                    ChatColor.DARK_GRAY + "Click mode to switch: WHITELIST/BLACKLIST"
+            ));
+            book.setItemMeta(meta);
+        }
+        inventory.setItem(26, book);
     }
 
     private static ItemStack filler() {
@@ -224,11 +294,45 @@ public final class ArenaAdminMenus {
         return item;
     }
 
+    private static ItemStack lootModeRow(boolean blacklistMode) {
+        ItemStack item = new ItemStack(Material.BOOK);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.GOLD + "Loot mode");
+            String mode = blacklistMode ? "BLACKLIST" : "WHITELIST";
+            meta.setLore(Arrays.asList(
+                    ChatColor.YELLOW + "Mode: " + ChatColor.GREEN + mode,
+                    ChatColor.GRAY + "Click to switch"
+            ));
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private static ItemStack editorRow(Material icon, String label) {
+        ItemStack item = new ItemStack(icon);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.GOLD + label);
+            meta.setLore(Arrays.asList(
+                    ChatColor.GRAY + "Click to open editor",
+                    ChatColor.DARK_GRAY + "Put items in/out, close to save"
+            ));
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
     public static boolean isSettingsTitle(String title) {
         return SETTINGS_TITLE.equals(title);
     }
 
     public static boolean isCosmeticsTitle(String title) {
         return COSMETICS_TITLE.equals(title);
+    }
+
+    public static boolean isGlobalSettingsTitle(String title) {
+        return GLOBAL_SETTINGS_TITLE.equals(title);
     }
 }

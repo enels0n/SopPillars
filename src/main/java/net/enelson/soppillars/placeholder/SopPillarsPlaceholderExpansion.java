@@ -65,10 +65,10 @@ public final class SopPillarsPlaceholderExpansion extends PlaceholderExpansion {
                 return "";
             case "team":
                 if (waiting != null) {
-                    return String.valueOf(waiting.getTeam(playerId));
+                    return asWholeString(waiting.getTeam(playerId));
                 }
                 if (running != null) {
-                    return String.valueOf(running.getTeam(playerId));
+                    return asWholeString(running.getTeam(playerId));
                 }
                 return "0";
             case "alive":
@@ -77,25 +77,29 @@ public final class SopPillarsPlaceholderExpansion extends PlaceholderExpansion {
                 if (waiting == null) {
                     return "0";
                 }
-                return String.valueOf(Math.max(0, waiting.getCountdownRemaining()));
+                return asWholeString(Math.max(0, waiting.getCountdownRemaining()));
             case "alive_players":
-                return running == null ? "0" : String.valueOf(running.getAliveCount());
+                return running == null ? "0" : asWholeString(running.getAliveCount());
             case "players_total":
                 if (waiting != null) {
-                    return String.valueOf(waiting.size());
+                    return asWholeString(waiting.size());
                 }
                 if (running != null) {
-                    return String.valueOf(running.getPlayers().size());
+                    return asWholeString(running.getPlayers().size());
                 }
                 return "0";
+            case "min_players":
+                return asWholeString(resolveMinPlayers(waiting, running));
+            case "min_filled_teams":
+                return asWholeString(resolveMinFilledTeams(waiting, running));
             case "stats_games":
-                return String.valueOf(plugin.getStatistics().getInt("games", playerId));
+                return asWholeString(plugin.getStatistics().getInt("games", playerId));
             case "stats_wins":
-                return String.valueOf(plugin.getStatistics().getInt("wins", playerId));
+                return asWholeString(plugin.getStatistics().getInt("wins", playerId));
             case "stats_kills":
-                return String.valueOf(plugin.getStatistics().getInt("kills", playerId));
+                return asWholeString(plugin.getStatistics().getInt("kills", playerId));
             case "stats_deaths":
-                return String.valueOf(plugin.getStatistics().getInt("deaths", playerId));
+                return asWholeString(plugin.getStatistics().getInt("deaths", playerId));
             default:
                 return null;
         }
@@ -115,5 +119,29 @@ public final class SopPillarsPlaceholderExpansion extends PlaceholderExpansion {
             return "spectator";
         }
         return "running";
+    }
+
+    private int resolveMinPlayers(WaitingMatch waiting, RunningMatch running) {
+        if (waiting != null) {
+            return waiting.getArena().getSettings().getMinPlayers();
+        }
+        if (running != null) {
+            return running.getArena().getSettings().getMinPlayers();
+        }
+        return plugin.getConfig().getInt("settings.default-min-players", 2);
+    }
+
+    private int resolveMinFilledTeams(WaitingMatch waiting, RunningMatch running) {
+        if (waiting != null) {
+            return waiting.getArena().getSettings().getMinFilledTeams();
+        }
+        if (running != null) {
+            return running.getArena().getSettings().getMinFilledTeams();
+        }
+        return plugin.getConfig().getInt("settings.default-min-filled-teams", 2);
+    }
+
+    private String asWholeString(int value) {
+        return Integer.toString(value);
     }
 }

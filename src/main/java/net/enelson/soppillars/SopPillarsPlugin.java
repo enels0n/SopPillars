@@ -4,10 +4,14 @@ import net.enelson.soppillars.arena.ArenaManager;
 import net.enelson.soppillars.cage.CageManager;
 import net.enelson.soppillars.command.PillarsCommand;
 import net.enelson.soppillars.config.PillarsConfig;
+import net.enelson.soppillars.cosmetic.CosmeticManager;
 import net.enelson.soppillars.edit.EditorManager;
+import net.enelson.soppillars.edit.EditWizardManager;
 import net.enelson.soppillars.kit.KitManager;
+import net.enelson.soppillars.loot.LootListEditorManager;
 import net.enelson.soppillars.listener.ArenaAdminMenuListener;
 import net.enelson.soppillars.listener.ArenaProtectionListener;
+import net.enelson.soppillars.listener.EditWizardListener;
 import net.enelson.soppillars.listener.MatchArenaEnvironmentListener;
 import net.enelson.soppillars.listener.MatchSpectatorListener;
 import net.enelson.soppillars.listener.MatchBuildListener;
@@ -44,6 +48,9 @@ public final class SopPillarsPlugin extends JavaPlugin implements Listener {
     private CageManager cageManager;
     private ArenaSnapshotManager arenaSnapshotManager;
     private PlayerStatisticsManager statisticsManager;
+    private CosmeticManager cosmeticManager;
+    private EditWizardManager editWizardManager;
+    private LootListEditorManager lootListEditorManager;
     private PartyBridge partyBridge = new SoloPartyBridge();
     private SopPillarsPlaceholderExpansion placeholderExpansion;
 
@@ -59,6 +66,9 @@ public final class SopPillarsPlugin extends JavaPlugin implements Listener {
         this.cageManager = new CageManager(this);
         this.arenaSnapshotManager = new ArenaSnapshotManager(this);
         this.statisticsManager = new PlayerStatisticsManager(this);
+        this.cosmeticManager = new CosmeticManager(this);
+        this.editWizardManager = new EditWizardManager(this);
+        this.lootListEditorManager = new LootListEditorManager(this);
 
         if (!reloadPlugin()) {
             Bukkit.getPluginManager().disablePlugin(this);
@@ -77,6 +87,7 @@ public final class SopPillarsPlugin extends JavaPlugin implements Listener {
         Bukkit.getPluginManager().registerEvents(new ArenaProtectionListener(this), this);
         Bukkit.getPluginManager().registerEvents(new MatchBuildListener(this), this);
         Bukkit.getPluginManager().registerEvents(new ArenaAdminMenuListener(this), this);
+        Bukkit.getPluginManager().registerEvents(new EditWizardListener(this), this);
         Bukkit.getPluginManager().registerEvents(this, this);
         attachSopPartyBridgeIfAvailable();
         registerPlaceholderExpansionIfAvailable();
@@ -93,6 +104,9 @@ public final class SopPillarsPlugin extends JavaPlugin implements Listener {
         if (this.placeholderExpansion != null) {
             this.placeholderExpansion.unregister();
             this.placeholderExpansion = null;
+        }
+        if (this.editWizardManager != null) {
+            this.editWizardManager.stopAll();
         }
     }
 
@@ -147,6 +161,8 @@ public final class SopPillarsPlugin extends JavaPlugin implements Listener {
             this.arenaManager.reload();
             this.kitManager.reload();
             this.statisticsManager.reload();
+            this.cosmeticManager.reload();
+            this.editWizardManager.stopAll();
             this.matchManager.reset();
             this.cageManager.clearAll();
             this.matchManager.startTicker();
@@ -192,6 +208,18 @@ public final class SopPillarsPlugin extends JavaPlugin implements Listener {
 
     public PlayerStatisticsManager getStatistics() {
         return statisticsManager;
+    }
+
+    public CosmeticManager getCosmeticManager() {
+        return cosmeticManager;
+    }
+
+    public EditWizardManager getEditWizardManager() {
+        return editWizardManager;
+    }
+
+    public LootListEditorManager getLootListEditorManager() {
+        return lootListEditorManager;
     }
 
     public PartyBridge getPartyBridge() {

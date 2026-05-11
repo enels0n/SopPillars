@@ -77,11 +77,37 @@ public final class PlayerStatisticsManager {
     }
 
     public int getInt(String category, UUID playerId) {
-        return config.getInt(category + "." + playerId.toString(), 0);
+        return readWholeNumber(category + "." + playerId.toString(), 0);
     }
 
     private void addInt(String category, String uuidKey, int delta) {
         String path = category + "." + uuidKey;
-        config.set(path, config.getInt(path, 0) + delta);
+        config.set(path, readWholeNumber(path, 0) + delta);
+    }
+
+    private int readWholeNumber(String path, int fallback) {
+        Object raw = config.get(path);
+        if (raw == null) {
+            return fallback;
+        }
+        if (raw instanceof Number) {
+            return ((Number) raw).intValue();
+        }
+        if (raw instanceof String) {
+            String value = ((String) raw).trim();
+            if (value.isEmpty()) {
+                return fallback;
+            }
+            try {
+                return Integer.parseInt(value);
+            } catch (NumberFormatException ignored) {
+                try {
+                    return (int) Math.round(Double.parseDouble(value));
+                } catch (NumberFormatException ignoredAgain) {
+                    return fallback;
+                }
+            }
+        }
+        return fallback;
     }
 }

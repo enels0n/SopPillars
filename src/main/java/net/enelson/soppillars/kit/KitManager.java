@@ -24,6 +24,7 @@ import java.util.UUID;
 public final class KitManager {
 
     private static final String KIT_MENU_TITLE = ChatColor.DARK_AQUA + "Choose Kit";
+    private static final String NO_KIT_ID = "__none__";
 
     private final SopPillarsPlugin plugin;
     private final Map<String, KitDefinition> kits = new LinkedHashMap<String, KitDefinition>();
@@ -53,21 +54,23 @@ public final class KitManager {
 
     public void openKitMenu(Player player) {
         List<KitDefinition> available = getAvailableKits(player);
-        if (available.isEmpty()) {
-            plugin.getMessageService().send(player, "kit-none-available");
-            return;
-        }
-        int size = Math.max(9, ((available.size() - 1) / 9 + 1) * 9);
+        int size = Math.max(9, ((available.size()) / 9 + 1) * 9);
         Inventory inventory = Bukkit.createInventory(null, size, KIT_MENU_TITLE);
         for (int index = 0; index < available.size(); index++) {
             inventory.setItem(index, createKitIcon(player, available.get(index)));
         }
+        inventory.setItem(available.size(), createNoKitIcon(player));
         player.openInventory(inventory);
     }
 
     public void handleKitMenuClick(Player player, int slot) {
         List<KitDefinition> available = getAvailableKits(player);
         if (slot < 0 || slot >= available.size()) {
+            if (slot == available.size()) {
+                selectedKitByPlayer.put(player.getUniqueId(), NO_KIT_ID);
+                player.closeInventory();
+                plugin.getMessageService().send(player, "kit-disabled");
+            }
             return;
         }
         KitDefinition selected = available.get(slot);
@@ -171,6 +174,9 @@ public final class KitManager {
 
     private KitDefinition getSelectedKit(Player player) {
         String selectedId = selectedKitByPlayer.get(player.getUniqueId());
+        if (NO_KIT_ID.equals(selectedId)) {
+            return null;
+        }
         KitDefinition selected = selectedId == null ? null : kits.get(selectedId);
         if (selected != null && hasAccess(player, selected)) {
             return selected;
@@ -213,6 +219,24 @@ public final class KitManager {
             }
             meta.setLore(lore);
             meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private ItemStack createNoKitIcon(Player player) {
+        ItemStack item = new ItemStack(Material.BARRIER);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.RED + "No kit");
+            List<String> lore = new ArrayList<String>();
+            lore.add(ChatColor.GRAY + "Play without starting kit.");
+            if (NO_KIT_ID.equals(selectedKitByPlayer.get(player.getUniqueId()))) {
+                lore.add(ChatColor.GREEN + "Currently selected");
+            } else {
+                lore.add(ChatColor.YELLOW + "Click to disable kit");
+            }
+            meta.setLore(lore);
             item.setItemMeta(meta);
         }
         return item;

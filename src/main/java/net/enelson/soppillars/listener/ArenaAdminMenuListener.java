@@ -7,6 +7,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
+import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 
 public final class ArenaAdminMenuListener implements Listener {
@@ -25,6 +26,16 @@ public final class ArenaAdminMenuListener implements Listener {
         String title = event.getView().getTitle();
         if (ArenaAdminMenus.isCosmeticsTitle(title)) {
             event.setCancelled(true);
+            if (event.getCurrentItem() != null) {
+                plugin.getCosmeticManager().handleMenuClick((Player) event.getWhoClicked(), event.getSlot());
+            }
+            return;
+        }
+        if (ArenaAdminMenus.isGlobalSettingsTitle(title)) {
+            event.setCancelled(true);
+            if (event.getCurrentItem() != null) {
+                ArenaAdminMenus.handleGlobalSettingsClick(plugin, (Player) event.getWhoClicked(), event.getSlot());
+            }
             return;
         }
         if (!ArenaAdminMenus.isSettingsTitle(title)) {
@@ -47,8 +58,21 @@ public final class ArenaAdminMenuListener implements Listener {
     @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
         String title = event.getView().getTitle();
-        if (ArenaAdminMenus.isSettingsTitle(title) || ArenaAdminMenus.isCosmeticsTitle(title)) {
+        if (ArenaAdminMenus.isSettingsTitle(title) || ArenaAdminMenus.isCosmeticsTitle(title)
+                || ArenaAdminMenus.isGlobalSettingsTitle(title)) {
             event.setCancelled(true);
         }
+    }
+
+    @EventHandler
+    public void onInventoryClose(InventoryCloseEvent event) {
+        if (!(event.getPlayer() instanceof Player)) {
+            return;
+        }
+        String title = event.getView().getTitle();
+        if (!plugin.getLootListEditorManager().isLootListEditorTitle(title)) {
+            return;
+        }
+        plugin.getLootListEditorManager().handleClose((Player) event.getPlayer(), event.getInventory());
     }
 }

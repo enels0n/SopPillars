@@ -9,6 +9,7 @@ import com.sk89q.worldedit.math.BlockVector3;
 import com.sk89q.worldedit.world.block.BaseBlock;
 import net.enelson.soppillars.SopPillarsPlugin;
 import net.enelson.soppillars.match.WaitingMatch;
+import net.enelson.soppillars.model.SerializedLocation;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
@@ -46,7 +47,8 @@ public final class CageManager {
     public void spawnCages(WaitingMatch match) {
         clearAll();
         for (Player player : resolvePlayers(match)) {
-            ActiveCage cage = createCage(player);
+            int rotationQuarterTurns = resolveRotationQuarterTurns(match, player);
+            ActiveCage cage = createCage(player, rotationQuarterTurns);
             if (cage != null) {
                 activeCages.add(cage);
             }
@@ -80,11 +82,11 @@ public final class CageManager {
         }
     }
 
-    private ActiveCage createCage(Player player) {
+    private ActiveCage createCage(Player player, int rotationQuarterTurns) {
         if (player == null || player.getWorld() == null) {
             return null;
         }
-        ActiveCage schematic = createCageFromSchematic(player);
+        ActiveCage schematic = createCageFromSchematic(player, rotationQuarterTurns);
         if (schematic != null) {
             return schematic;
         }
@@ -110,8 +112,8 @@ public final class CageManager {
         return new ActiveCage(player, captured);
     }
 
-    private ActiveCage createCageFromSchematic(Player player) {
-        File schem = new File(plugin.getPillarsConfig().getCagesFolder(), "default.schem");
+    private ActiveCage createCageFromSchematic(Player player, int rotationQuarterTurns) {
+        File schem = plugin.getCosmeticManager().resolveSelectedCageFile(player);
         if (!schem.isFile()) {
             return null;
         }
@@ -133,9 +135,12 @@ public final class CageManager {
                 if (data == null || data.getMaterial() == Material.AIR) {
                     continue;
                 }
-                int x = baseX + (pos.getX() - origin.getX());
-                int y = baseY + (pos.getY() - origin.getY());
-                int z = baseZ + (pos.getZ() - origin.getZ());
+                int dx = pos.x() - origin.x();
+                int dy = pos.y() - origin.y();
+                int dz = pos.z() - origin.z();
+                int x = baseX + rotateOffsetX(dx, dz, rotationQuarterTurns);
+                int y = baseY + dy;
+                int z = baseZ + rotateOffsetZ(dx, dz, rotationQuarterTurns);
                 Block block = player.getWorld().getBlockAt(x, y, z);
                 captured.add(new CapturedBlockState(block));
                 block.setBlockData(data, false);
@@ -148,6 +153,54 @@ public final class CageManager {
             plugin.getLogger().warning("Failed to place cages/default.schem (" + exception.getMessage()
                     + "); falling back to glass cage.");
             return null;
+        }
+    }
+
+    private int resolveRotationQuarterTurns(WaitingMatch match, Player player) {
+        int team = match.getTeam(player.getUniqueId());
+        if (team <= 0) {
+            return 0;
+        }
+        List<java.util.UUID> teamPlayers = match.getPlayersInTeam(team);
+        int slot = teamPlayers.indexOf(player.getUniqueId()) + 1;
+        if (slot <= 0) {
+            return 0;
+        }
+        SerializedLocation spawn = match.getArena().getSpawn(team, slot);
+        if (spawn == null) {
+            return 0;
+        }
+        return rotationQuarterTurnsFromYaw(spawn.getYaw());
+    }
+
+    private static int rotationQuarterTurnsFromYaw(float yaw) {
+        int quarter = Math.round(yaw / 90.0F);
+        return Math.floorMod(quarter, 4);
+    }
+
+    private static int rotateOffsetX(int x, int z, int quarterTurns) {
+        switch (quarterTurns) {
+            case 1:
+                return -z;
+            case 2:
+                return -x;
+            case 3:
+                return z;
+            default:
+                return x;
+        }
+    }
+
+    private static int rotateOffsetZ(int x, int z, int quarterTurns) {
+        switch (quarterTurns) {
+            case 1:
+                return x;
+            case 2:
+                return -z;
+            case 3:
+                return -x;
+            default:
+                return z;
         }
     }
 

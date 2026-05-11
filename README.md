@@ -1,80 +1,80 @@
 # SopPillars
 
-`SopPillars` - плагин для Paper с PvP-режимом в стиле Lucky Pillars:
-игроки заходят в арену, стартуют в клетках, получают случайный лут по таймеру,
-сражаются командами, побеждает последняя живая команда.
+`SopPillars` is a Paper plugin for a Lucky Pillars-style PvP mini-game:
+players queue into an arena, start in cages, receive random loot over time,
+fight in teams, and the last alive team wins.
 
-Плагин рассчитан на рабочий прод-сервер: удобная админка (wizard + меню),
-интеграция с пати, косметика клеток, PlaceholderAPI, снапшоты арены.
+It is built for real server usage with admin-friendly tooling (wizard + menus),
+party integration, cosmetic cages, PlaceholderAPI support, and arena rollback flow.
 
-## Основные возможности
+## Key Features
 
-- Полный цикл арены: лобби ожидания -> обратный отсчет -> клетки -> бой -> празднование победы.
-- Пошаговый wizard настройки арены с предметами управления и прогрессом в actionbar.
-- Поддержка пати через `SopParty`, при этом соло-игроки без пати заходят корректно.
-- Меню настроек конкретной арены (`/pillars settings`) с сохранением на лету.
-- Улучшенный UX режима лута:
-  - явный переключатель `WHITELIST/BLACKLIST`,
-  - инвентарь-редакторы списков для арены,
-  - инвентарь-редакторы глобальных списков (`/pillars settings global`).
-- Система наборов (kits), включая выбор `No kit` (игра без стартового набора).
-- Косметические клетки из `.schem` с выбором по игроку и проверкой permissions.
-- Вставка клеток через WorldEdit с поворотом по yaw у точки спавна.
-- PlaceholderAPI placeholder'ы для таба, scoreboards и админ-виджетов.
-- Снапшоты/бэкапы арены для аккуратного отката после матчей.
+- Full arena lifecycle: waiting lobby -> countdown -> cages -> combat -> winner phase.
+- Interactive setup wizard with hotbar controls and action bar progress.
+- Party-aware queueing via `SopParty`, with proper solo fallback.
+- Per-arena settings menu (`/pillars settings`) with immediate save.
+- Improved loot UX:
+  - explicit `WHITELIST/BLACKLIST` mode switch,
+  - inventory editors for arena loot lists,
+  - inventory editors for global default lists (`/pillars settings global`).
+- Kit system with player selection and `No kit` option.
+- Cosmetic cage schematics (`.schem`) with permission-based access.
+- WorldEdit cage paste with rotation from configured spawn yaw.
+- PlaceholderAPI placeholders for tab, scoreboards, and admin widgets.
+- Arena snapshots/backups for clean post-match restoration.
 
-## Требования
+## Requirements
 
-- Java 8+ (проект собирается с `target 8`).
-- Сервер Paper/Spigot (`api-version` в `plugin.yml`: `1.16`).
-- Опциональные soft-dependencies:
-  - `SopParty` (логика пати),
-  - `PlaceholderAPI` (placeholder'ы),
-  - `SopLib` (если используется в вашей сборке).
-- Для работы `.schem` клеток нужен WorldEdit на сервере.
+- Java 8+ (the project compiles with `target 8`).
+- Paper/Spigot-compatible server (`api-version` in `plugin.yml`: `1.16`).
+- Optional soft dependencies:
+  - `SopParty` (party queue integration),
+  - `PlaceholderAPI` (placeholders),
+  - `SopLib` (if used in your stack).
+- WorldEdit plugin is required on the server for `.schem` cage support.
 
-## Сборка
+## Build
 
-Из корня репозитория:
+From repository root:
 
 ```bash
 mvn -f "SopPillars/pom.xml" -DskipTests package
 ```
 
-Готовый JAR:
+Output JAR:
 
 - `SopPillars/target/SopPillars.jar`
 
-## Установка
+## Installation
 
-1. Скопируйте `SopPillars.jar` в `plugins/`.
-2. Один раз запустите сервер (создадутся конфиги/папки).
-3. (Опционально) Поставьте `SopParty`, `PlaceholderAPI`, WorldEdit.
-4. Перезапустите сервер.
+1. Copy `SopPillars.jar` into `plugins/`.
+2. Start the server once to generate config folders/files.
+3. (Optional) Install `SopParty`, `PlaceholderAPI`, and WorldEdit.
+4. Restart the server.
 
-## Быстрый старт
+## Quick Start
 
-1. Установите глобальный спавн:
+1. Set global fallback spawn:
    - `/pillars setglobalspawn`
-2. Создайте арену:
+2. Create an arena:
    - `/pillars create <name> <mode> <teams> <playersPerTeam>`
-3. Пройдите wizard настройки (см. ниже).
-4. Сохраните арену:
+3. Complete the setup wizard (see below).
+4. Save arena:
    - `/pillars save`
-5. Проверьте вход:
+5. Test join:
    - `/pillars join <name>`
 
-## Wizard настройки арены
+## Arena Setup Wizard
 
-После `/pillars create` или `/pillars edit` wizard запускается автоматически.
+Wizard starts automatically after `/pillars create` or `/pillars edit`.
 
-Управление в хотбаре:
+Hotbar controls:
 
-- Слот 1: установить текущую точку (`Set`)
-- Слот 2: шаг назад (`Back`)
-- Слот 3: пропустить (`Skip`) - только для опционального `setendspawn`
+- Slot 1: set current point (`Set`)
+- Slot 2: go back (`Back`)
+- Slot 3: skip (`Skip`) - only for optional `setendspawn`
 
-Порядок шагов:
+Step order:
 
 1. `pos1` (gameplay area)
 2. `pos2` (gameplay area)
@@ -83,13 +83,13 @@ mvn -f "SopPillars/pom.xml" -DskipTests package
 5. `setspectator`
 6. `setlobbyspawn`
 7. `setendspawn` (optional)
-8. `setspawn` for every team/player slot in order
+8. `setspawn` for each team/player slot in order
 
-Прогресс отображается в actionbar (`Step X/8`), а на `setspawn` еще и как прогресс по слотам.
+Progress is shown in action bar as `Step X/8`, and during `setspawn` it also shows spawn-slot progress.
 
-## Команды
+## Commands
 
-Игрок:
+Player commands:
 
 - `/pillars list`
 - `/pillars join <arena>`
@@ -99,14 +99,14 @@ mvn -f "SopPillars/pom.xml" -DskipTests package
 - `/pillars cosmetics`
 - `/pillars stats`
 
-Админ:
+Admin commands:
 
 - `/pillars create <name> <mode> <teams> <playersPerTeam>`
 - `/pillars edit <arena>`
 - `/pillars save`
 - `/pillars cancel <arena>`
 - `/pillars delete <arena>`
-- `/pillars settings` (edited arena settings)
+- `/pillars settings` (currently edited arena)
 - `/pillars settings global` (global loot defaults)
 - `/pillars setglobalspawn`
 - `/pillars tp <arena>`
@@ -114,59 +114,59 @@ mvn -f "SopPillars/pom.xml" -DskipTests package
 - `/pillars kitremove <kit> <slot|all>`
 - `/pillars reload`
 
-## Права
+## Permissions
 
 - `soppillars.play` - default `true`
 - `soppillars.stats` - default `true`
 - `soppillars.admin` - default `op`
-- `soppillars.cage.<id>` - опциональный доступ к конкретной клетке
+- `soppillars.cage.<id>` - optional per-cage permission
 
-## Наборы (Kits)
+## Kits
 
-- Игрок выбирает набор через `/pillars kits`.
-- Пункт `No kit` позволяет играть без стартового преимущества.
-- Админ может редактировать наборы без правки YAML:
-  - предмет в руке -> `/pillars kitadd <kit>`
-  - удалить по индексу -> `/pillars kitremove <kit> <slot>`
-  - очистить набор -> `/pillars kitremove <kit> all`
+- Players choose kits via `/pillars kits`.
+- `No kit` allows playing without any starter kit.
+- Admin kit management without manual YAML edits:
+  - hold item in main hand -> `/pillars kitadd <kit>`
+  - remove by index -> `/pillars kitremove <kit> <slot>`
+  - clear entire kit -> `/pillars kitremove <kit> all`
 
-Файлы наборов лежат в `plugins/SopPillars/kits/`.
+Kit files are stored in `plugins/SopPillars/kits/`.
 
-## Система лута
+## Loot System
 
-В меню арены (`/pillars settings`):
+Arena settings menu (`/pillars settings`) includes:
 
-- интервал выдачи лута,
-- явный режим (`WHITELIST` или `BLACKLIST`),
-- редакторы списков арены:
+- loot interval,
+- explicit loot mode (`WHITELIST` or `BLACKLIST`),
+- arena list editors:
   - `Edit arena whitelist`
   - `Edit arena blacklist`
 
-В глобальном меню (`/pillars settings global`):
+Global settings menu (`/pillars settings global`) includes:
 
-- режим по умолчанию,
-- редактор global whitelist,
-- редактор global blacklist.
+- default loot mode,
+- global whitelist editor,
+- global blacklist editor.
 
-Как работают редакторы:
+List editor workflow:
 
-- открыли инвентарь редактора,
-- положили/убрали предметы,
-- закрыли инвентарь -> список сохранен.
+- open editor inventory,
+- add/remove items,
+- close inventory to save list.
 
-## Косметика и клетки
+## Cosmetics and Cages
 
-- Поместите `.schem` клетки в `plugins/SopPillars/cages/`.
-- `default.schem` автоматически восстанавливается из ресурсов, если удален.
-- Игрок выбирает клетку через `/pillars cosmetics` (с учетом permission).
-- На старте матча плагин вставляет выбранную схему через WorldEdit.
-- Поворот определяется по yaw у точки `setspawn` (ближайшая сторона света).
+- Put cage `.schem` files into `plugins/SopPillars/cages/`.
+- `default.schem` is auto-restored from plugin resources if deleted.
+- Players select cages via `/pillars cosmetics` (permission-aware).
+- At match start, plugin pastes selected schematic through WorldEdit.
+- Rotation is based on `setspawn` yaw (nearest cardinal direction).
 
 ## PlaceholderAPI
 
-Префикс: `%soppillars_<key>%`
+Prefix: `%soppillars_<key>%`
 
-Доступные ключи:
+Available keys:
 
 - `in_game`
 - `game_status`
@@ -184,40 +184,38 @@ mvn -f "SopPillars/pom.xml" -DskipTests package
 - `stats_kills`
 - `stats_deaths`
 
-Примеры:
+Examples:
 
 - `%soppillars_game_status%`
 - `%soppillars_min_players%`
 - `%soppillars_stats_wins%`
 
-## Конфигурация
+## Configuration
 
-Основной файл: `plugins/SopPillars/config.yml`
+Main file: `plugins/SopPillars/config.yml`
 
-Важные параметры:
+Important options:
 
-- `settings.global-spawn` - fallback точка телепорта.
-- `settings.default-min-players` и `settings.default-min-filled-teams`.
+- `settings.global-spawn` - fallback teleport location.
+- `settings.default-min-players` and `settings.default-min-filled-teams`.
 - `settings.default-loot-blacklist-mode`.
 - `settings.default-loot-whitelist` / `settings.default-loot-blacklist`.
 
-Файлы арен находятся в `plugins/SopPillars/arenas/`.
+Arena files are stored in `plugins/SopPillars/arenas/`.
 
-## Частые проблемы
+## Troubleshooting
 
 - "No kits are available":
-  - проверьте права на кит и YAML-файлы в `kits/`.
-- Не ставится кастомная клетка:
-  - проверьте наличие `.schem` в `cages/`,
-  - убедитесь, что WorldEdit установлен и загрузился.
-- Placeholder пустой:
-  - проверьте, что PlaceholderAPI установлен и expansion зарегистрировался при старте.
-- После сборки нет jar:
-  - используйте Maven `package`, а не только `compile`.
+  - check kit permissions and kit YAML files in `kits/`.
+- Custom cage is not spawning:
+  - verify `.schem` exists in `cages/`,
+  - ensure WorldEdit is installed and loaded.
+- Placeholder returns empty:
+  - ensure PlaceholderAPI is installed and expansion is registered at startup.
+- Build outputs classes but no jar:
+  - use Maven `package`, not only `compile`.
 
-## Для разработки
+## Development Notes
 
-- Документы по требованиям:
-  - [SPEC.md](./SPEC.md)
-  - [MVP.md](./MVP.md)
-- Текущая версия модуля: `0.0.1-SNAPSHOT`.
+- Current module version: `0.0.1-SNAPSHOT`.
+- `MVP.md` and `SPEC.md` are intentionally kept local and ignored in Git.

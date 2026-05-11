@@ -9,6 +9,7 @@ import net.enelson.soppillars.model.SerializedLocation;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.World;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabExecutor;
@@ -83,6 +84,47 @@ public final class PillarsCommand implements TabExecutor {
                 return true;
             }
             plugin.getMessageService().send(sender, "arena-list", singletonReplacement("arenas", String.join(", ", arenaNames)));
+            return true;
+        }
+
+        if ("tp".equals(subcommand)) {
+            if (!hasAdmin(sender)) {
+                return true;
+            }
+            Player player = requirePlayer(sender);
+            if (player == null) {
+                return true;
+            }
+            if (args.length < 2) {
+                plugin.getMessageService().send(player, "usage-tp");
+                return true;
+            }
+            PillarsArena arena = plugin.getArenaManager().getArena(args[1]);
+            if (arena == null) {
+                plugin.getMessageService().send(player, "arena-missing", singletonReplacement("arena", args[1]));
+                return true;
+            }
+            SerializedLocation lobbySpawn = arena.getLobbySpawn();
+            if (lobbySpawn != null) {
+                World world = Bukkit.getWorld(lobbySpawn.getWorld());
+                if (world != null) {
+                    player.teleport(lobbySpawn.toLocation(world));
+                    plugin.getMessageService().send(player, "teleported-arena-lobby", singletonReplacement("arena", arena.getName()));
+                    return true;
+                }
+            }
+            SerializedCuboid lobbyArea = arena.getLobbyArea();
+            if (lobbyArea == null) {
+                plugin.getMessageService().send(player, "arena-no-lobby", singletonReplacement("arena", arena.getName()));
+                return true;
+            }
+            World world = Bukkit.getWorld(lobbyArea.getMin().getWorld());
+            if (world == null) {
+                plugin.getMessageService().send(player, "arena-no-lobby", singletonReplacement("arena", arena.getName()));
+                return true;
+            }
+            player.teleport(lobbyArea.getCenter(world));
+            plugin.getMessageService().send(player, "teleported-arena-lobby", singletonReplacement("arena", arena.getName()));
             return true;
         }
 
@@ -205,6 +247,7 @@ public final class PillarsCommand implements TabExecutor {
             PillarsArena arena = plugin.getArenaManager().createArena(name, mode, teams, playersPerTeam, player.getWorld().getName());
             plugin.getArenaManager().snapshotArenaBeforeEdit(arena.getName());
             plugin.getEditorManager().enterEditor(player.getUniqueId(), arena.getName());
+            plugin.getEditWizardManager().start(player, arena);
             plugin.getMessageService().send(sender, "arena-created", singletonReplacement("arena", arena.getName()));
             plugin.getMessageService().send(sender, "editor-enter", singletonReplacement("arena", arena.getName()));
             return true;
@@ -230,6 +273,7 @@ public final class PillarsCommand implements TabExecutor {
             plugin.getArenaManager().snapshotArenaBeforeEdit(arena.getName());
             arena.setState(ArenaState.EDITING);
             plugin.getEditorManager().enterEditor(player.getUniqueId(), arena.getName());
+            plugin.getEditWizardManager().start(player, arena);
             plugin.getArenaManager().saveArena(arena);
             plugin.getMessageService().send(sender, "editor-enter", singletonReplacement("arena", arena.getName()));
             return true;
@@ -249,6 +293,7 @@ public final class PillarsCommand implements TabExecutor {
             }
             arena.setState(ArenaState.WAITING);
             plugin.getArenaManager().saveArena(arena);
+            plugin.getEditWizardManager().stop(player, true);
             plugin.getEditorManager().leaveEditor(player.getUniqueId());
             plugin.getMessageService().send(sender, "editor-save", singletonReplacement("arena", arena.getName()));
             if (plugin.getArenaSnapshotManager().captureSnapshot(arena)) {
@@ -282,6 +327,7 @@ public final class PillarsCommand implements TabExecutor {
                 plugin.getMessageService().send(sender, "not-editing");
                 return true;
             }
+            plugin.getEditWizardManager().stop(player, true);
             plugin.getEditorManager().leaveEditor(player.getUniqueId());
             if (!plugin.getArenaManager().restoreArenaFromEditBackup(arena.getName())) {
                 plugin.getLogger().info("No edit YAML backup for " + arena.getName() + "; reloading arena file as-is.");
@@ -382,6 +428,10 @@ public final class PillarsCommand implements TabExecutor {
             if (player == null) {
                 return true;
             }
+            if (args.length >= 2 && "global".equalsIgnoreCase(args[1])) {
+                ArenaAdminMenus.openGlobalSettings(plugin, player);
+                return true;
+            }
             PillarsArena arena = requireEditedArena(player);
             if (arena == null) {
                 return true;
@@ -398,7 +448,7 @@ public final class PillarsCommand implements TabExecutor {
             if (!hasPlay(player)) {
                 return true;
             }
-            ArenaAdminMenus.openCosmetics(plugin, player);
+            plugin.getCosmeticManager().openMenu(player);
             return true;
         }
 
@@ -453,25 +503,21 @@ public final class PillarsCommand implements TabExecutor {
                 root.add("delete");
                 root.add("reload");
                 root.add("settings");
+                root.add("tp");
                 root.add("kitadd");
                 root.add("kitremove");
-                root.add("pos1");
-                root.add("pos2");
-                root.add("lobbypos1");
-                root.add("lobbypos2");
-                root.add("setspawn");
-                root.add("setspectator");
-                root.add("setendspawn");
-                root.add("setlobbyspawn");
                 root.add("setglobalspawn");
             }
             return filterByPrefix(root, args[0]);
         }
         if (args.length == 2) {
             if ("edit".equalsIgnoreCase(args[0]) || "join".equalsIgnoreCase(args[0]) || "cancel".equalsIgnoreCase(args[0])
-                    || "delete".equalsIgnoreCase(args[0])) {
+                    || "delete".equalsIgnoreCase(args[0]) || "tp".equalsIgnoreCase(args[0])) {
                 if (("edit".equalsIgnoreCase(args[0]) || "cancel".equalsIgnoreCase(args[0]) || "delete".equalsIgnoreCase(args[0]))
                         && !canAdminSilently(sender)) {
+                    return Collections.emptyList();
+                }
+                if ("tp".equalsIgnoreCase(args[0]) && !canAdminSilently(sender)) {
                     return Collections.emptyList();
                 }
                 if ("join".equalsIgnoreCase(args[0]) && !canPlaySilently(sender)) {
@@ -490,6 +536,12 @@ public final class PillarsCommand implements TabExecutor {
                     return Collections.emptyList();
                 }
                 return filterByPrefix(onlinePlayerNames(), args[1]);
+            }
+            if ("settings".equalsIgnoreCase(args[0])) {
+                if (!canAdminSilently(sender)) {
+                    return Collections.emptyList();
+                }
+                return filterByPrefix(Collections.singletonList("global"), args[1]);
             }
             if ("setspawn".equalsIgnoreCase(args[0])) {
                 if (!canAdminSilently(sender)) {
@@ -645,13 +697,6 @@ public final class PillarsCommand implements TabExecutor {
         plugin.getMessageService().send(sender, "help-3");
         plugin.getMessageService().send(sender, "help-4");
         plugin.getMessageService().send(sender, "help-5");
-        plugin.getMessageService().send(sender, "help-6");
-        plugin.getMessageService().send(sender, "help-7");
-        plugin.getMessageService().send(sender, "help-8");
-        plugin.getMessageService().send(sender, "help-9");
-        plugin.getMessageService().send(sender, "help-10");
-        plugin.getMessageService().send(sender, "help-11");
-        plugin.getMessageService().send(sender, "help-12");
         plugin.getMessageService().send(sender, "help-13");
         plugin.getMessageService().send(sender, "help-14");
         plugin.getMessageService().send(sender, "help-15");
@@ -664,6 +709,7 @@ public final class PillarsCommand implements TabExecutor {
         plugin.getMessageService().send(sender, "help-22");
         plugin.getMessageService().send(sender, "help-23");
         plugin.getMessageService().send(sender, "help-24");
+        plugin.getMessageService().send(sender, "help-25");
     }
 
     private boolean hasAdmin(CommandSender sender) {
