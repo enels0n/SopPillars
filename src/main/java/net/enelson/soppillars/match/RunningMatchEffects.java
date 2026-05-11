@@ -28,6 +28,7 @@ public final class RunningMatchEffects {
     private boolean borderConfigured;
     private boolean shrinkApplied;
     private double initialDiameter;
+    private static final double ACTIVE_BORDER_DAMAGE_BUFFER = 0.1D;
 
     private int elapsedSeconds;
 
@@ -69,6 +70,8 @@ public final class RunningMatchEffects {
 
         initialDiameter = computeCoverDiameter(area);
         border.setSize(initialDiameter);
+        // Make border punishment start almost immediately after crossing the border line.
+        border.setDamageBuffer(ACTIVE_BORDER_DAMAGE_BUFFER);
 
         borderConfigured = true;
         lavaAllowed = arena.getSettings().isLavaEnabled();
