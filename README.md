@@ -177,18 +177,24 @@ Available keys:
 - `countdown`
 - `alive_players`
 - `players_total`
+- `loot_in` (alias: `next_loot_in`)
+- `time_to_end` (alias: `game_end_in`)
 - `min_players`
 - `min_filled_teams`
 - `stats_games`
 - `stats_wins`
 - `stats_kills`
 - `stats_deaths`
+- `stats_winstreak`
 
 Examples:
 
 - `%soppillars_game_status%`
 - `%soppillars_min_players%`
 - `%soppillars_stats_wins%`
+- `%soppillars_stats_winstreak%`
+- `%soppillars_loot_in%`
+- `%soppillars_time_to_end%`
 
 ## Configuration
 

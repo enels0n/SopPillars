@@ -1,6 +1,7 @@
 package net.enelson.soppillars.match;
 
 import net.enelson.soppillars.SopPillarsPlugin;
+import net.enelson.soppillars.arena.ArenaState;
 import net.enelson.soppillars.arena.PillarsArena;
 import net.enelson.soppillars.model.ArenaSettings;
 import net.enelson.soppillars.model.SerializedCuboid;
@@ -29,6 +30,7 @@ public final class RunningMatchEffects {
     private boolean shrinkApplied;
     private double initialDiameter;
     private static final double ACTIVE_BORDER_DAMAGE_BUFFER = 0.1D;
+    private int endingStartedAtElapsed = -1;
 
     private int elapsedSeconds;
 
@@ -82,6 +84,9 @@ public final class RunningMatchEffects {
         elapsedSeconds++;
         PillarsArena arena = match.getArena();
         ArenaSettings settings = arena.getSettings();
+        if (arena.getState() == ArenaState.ENDING && endingStartedAtElapsed < 0) {
+            endingStartedAtElapsed = elapsedSeconds;
+        }
 
         if (borderConfigured && !shrinkApplied && borderBackup != null) {
             int shrinkAt = settings.getCageSeconds() + settings.getPreBorderDelaySeconds();
@@ -135,14 +140,47 @@ public final class RunningMatchEffects {
         if (!settings.isLootEnabled()) {
             return;
         }
-        if (elapsedSeconds < Math.max(1, settings.getCageSeconds())) {
+        int cageSeconds = Math.max(1, settings.getCageSeconds());
+        int lootInterval = Math.max(1, settings.getLootIntervalSeconds());
+        if (elapsedSeconds <= cageSeconds) {
             return;
         }
-        int interval = Math.max(1, settings.getLootIntervalSeconds());
-        if (elapsedSeconds % interval != 0) {
+        int activeCombatSeconds = elapsedSeconds - cageSeconds;
+        if (activeCombatSeconds % lootInterval != 0) {
             return;
         }
         matchManager.grantLootTick(match);
+    }
+
+    public int getSecondsUntilNextLoot() {
+        ArenaSettings settings = match.getArena().getSettings();
+        if (!settings.isLootEnabled()) {
+            return 0;
+        }
+        int cageSeconds = Math.max(1, settings.getCageSeconds());
+        int lootInterval = Math.max(1, settings.getLootIntervalSeconds());
+        if (elapsedSeconds <= cageSeconds) {
+            return (cageSeconds - elapsedSeconds) + lootInterval;
+        }
+        int activeCombatSeconds = elapsedSeconds - cageSeconds;
+        int remainder = activeCombatSeconds % lootInterval;
+        return remainder == 0 ? lootInterval : (lootInterval - remainder);
+    }
+
+    public int getSecondsUntilEstimatedGameEnd() {
+        ArenaSettings settings = match.getArena().getSettings();
+        if (match.getArena().getState() == ArenaState.ENDING) {
+            if (endingStartedAtElapsed < 0) {
+                return Math.max(0, settings.getCelebrationSeconds());
+            }
+            int remainingCelebration = settings.getCelebrationSeconds() - (elapsedSeconds - endingStartedAtElapsed);
+            return Math.max(0, remainingCelebration);
+        }
+        int planned = Math.max(1, settings.getCageSeconds())
+                + Math.max(0, settings.getPreBorderDelaySeconds())
+                + Math.max(1, settings.getBorderShrinkSeconds())
+                + Math.max(0, settings.getPostShrinkEndDelaySeconds());
+        return Math.max(0, planned - elapsedSeconds);
     }
 
     public void cleanup() {

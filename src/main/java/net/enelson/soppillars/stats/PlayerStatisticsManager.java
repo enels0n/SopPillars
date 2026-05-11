@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.util.UUID;
 
 /**
- * Persistent player counters (games played, wins, kills, deaths).
+ * Persistent player counters (games played, wins, kills, deaths, winstreak).
  */
 public final class PlayerStatisticsManager {
 
@@ -53,6 +53,9 @@ public final class PlayerStatisticsManager {
             changed = true;
             if (winningTeam > 0 && match.getTeam(playerId) == winningTeam) {
                 addInt("wins", key, 1);
+                setInt("winstreak", key, readWholeNumber("winstreak." + key, 0) + 1);
+            } else {
+                setInt("winstreak", key, 0);
             }
         }
         if (changed) {
@@ -83,6 +86,10 @@ public final class PlayerStatisticsManager {
     private void addInt(String category, String uuidKey, int delta) {
         String path = category + "." + uuidKey;
         config.set(path, readWholeNumber(path, 0) + delta);
+    }
+
+    private void setInt(String category, String uuidKey, int value) {
+        config.set(category + "." + uuidKey, value);
     }
 
     private int readWholeNumber(String path, int fallback) {

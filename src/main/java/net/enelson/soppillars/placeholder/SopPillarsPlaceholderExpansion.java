@@ -88,6 +88,12 @@ public final class SopPillarsPlaceholderExpansion extends PlaceholderExpansion {
                     return asWholeString(running.getPlayers().size());
                 }
                 return "0";
+            case "loot_in":
+            case "next_loot_in":
+                return asWholeString(plugin.getMatchManager().getSecondsUntilNextLoot(playerId));
+            case "time_to_end":
+            case "game_end_in":
+                return asWholeString(plugin.getMatchManager().getSecondsUntilGameEnd(playerId));
             case "min_players":
                 return asWholeString(resolveMinPlayers(waiting, running));
             case "min_filled_teams":
@@ -100,6 +106,8 @@ public final class SopPillarsPlaceholderExpansion extends PlaceholderExpansion {
                 return asWholeString(plugin.getStatistics().getInt("kills", playerId));
             case "stats_deaths":
                 return asWholeString(plugin.getStatistics().getInt("deaths", playerId));
+            case "stats_winstreak":
+                return asWholeString(plugin.getStatistics().getInt("winstreak", playerId));
             default:
                 return null;
         }

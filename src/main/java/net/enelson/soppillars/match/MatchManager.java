@@ -554,12 +554,14 @@ public final class MatchManager {
             return;
         }
         SerializedCuboid gameplayArea = runningMatch.getArena().getGameplayArea();
+        SerializedCuboid lobbyArea = runningMatch.getArena().getLobbyArea();
+        Location location = player.getLocation();
         if (runningMatch.isAlive(player.getUniqueId())) {
             if (gameplayArea == null) {
                 return;
             }
             double minY = gameplayArea.getMin().getY();
-            if (player.getLocation().getY() < minY) {
+            if (location.getY() < minY) {
                 if (isEndingWinnerProtected(player)) {
                     teleportToSerializedLocation(player, runningMatch.getArena().getSpectatorSpawn());
                     player.setFallDistance(0.0F);
@@ -570,7 +572,9 @@ public final class MatchManager {
             }
             return;
         }
-        if (gameplayArea == null || gameplayArea.contains(player.getLocation())) {
+        boolean inGameplay = gameplayArea != null && gameplayArea.contains(location);
+        boolean inLobby = lobbyArea != null && lobbyArea.contains(location);
+        if (inGameplay || inLobby) {
             return;
         }
         SerializedLocation spectatorSpawn = runningMatch.getArena().getSpectatorSpawn();
@@ -1232,6 +1236,34 @@ public final class MatchManager {
             return running.getArena().getName();
         }
         return "";
+    }
+
+    public int getSecondsUntilNextLoot(UUID playerId) {
+        RunningMatch running = getRunningMatch(playerId);
+        if (running == null) {
+            return 0;
+        }
+        RunningMatchEffects effects = runningEffects.get(normalize(running.getArena().getName()));
+        if (effects == null) {
+            return 0;
+        }
+        return effects.getSecondsUntilNextLoot();
+    }
+
+    public int getSecondsUntilGameEnd(UUID playerId) {
+        WaitingMatch waiting = getWaitingMatch(playerId);
+        if (waiting != null) {
+            return Math.max(0, waiting.getCountdownRemaining());
+        }
+        RunningMatch running = getRunningMatch(playerId);
+        if (running == null) {
+            return 0;
+        }
+        RunningMatchEffects effects = runningEffects.get(normalize(running.getArena().getName()));
+        if (effects == null) {
+            return 0;
+        }
+        return effects.getSecondsUntilEstimatedGameEnd();
     }
 
     public boolean isRunningSpectator(Player player) {
