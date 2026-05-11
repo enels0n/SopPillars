@@ -28,6 +28,11 @@ public final class MatchLobbyListener implements Listener {
         }
         Player player = event.getPlayer();
         ItemStack item = event.getItem();
+        if (plugin.getMatchManager().isLeaveArenaItem(item)) {
+            event.setCancelled(true);
+            plugin.getMatchManager().leaveArena(player, false);
+            return;
+        }
         if (!plugin.getMatchManager().isTeamSelectorItem(item)) {
             return;
         }

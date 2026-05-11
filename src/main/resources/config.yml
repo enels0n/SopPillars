@@ -172,6 +172,21 @@ settings:
   default-allowed-commands:
     - "msg"
     - "r"
+  waiting-items:
+    team-selector:
+      # Hotbar slot 0..8
+      slot: 4
+      name: "&aTeam Selector"
+      lore:
+        - "&7Right click to choose your team."
+        - "&8Waiting lobby only"
+    leave-arena:
+      # Hotbar slot 0..8
+      slot: 8
+      name: "&cLeave Arena"
+      lore:
+        - "&7Right click to leave waiting queue."
+        - "&8Waiting lobby only"
   global-spawn:
     world: "World"
     x: 0.0

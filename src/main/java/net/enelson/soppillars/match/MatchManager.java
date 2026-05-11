@@ -15,6 +15,7 @@ import org.bukkit.ChatColor;
 import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
@@ -27,6 +28,7 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
 
 import java.util.ArrayList;
@@ -50,11 +52,25 @@ public final class MatchManager {
     private static final String SOPPILLARS_RESERVATION_PREFIX = "soppillars:";
     private static final String RANDOM_RESERVATION_BLOCKED = "__reservation_blocked__";
     private static final long LOBBY_BOUNDS_TELEPORT_COOLDOWN_MS = 750L;
-    private static final int TEAM_SELECTOR_SLOT = 4;
+    private static final int TEAM_SELECTOR_SLOT_DEFAULT = 4;
+    private static final int LEAVE_ARENA_SLOT_DEFAULT = 8;
+    private static final String TEAM_SELECTOR_NAME_DEFAULT = ChatColor.GREEN + "Team Selector";
+    private static final String LEAVE_ARENA_NAME_DEFAULT = ChatColor.RED + "Leave Arena";
+    private static final List<String> TEAM_SELECTOR_LORE_DEFAULT = Arrays.asList(
+            ChatColor.GRAY + "Right click to choose your team.",
+            ChatColor.DARK_GRAY + "Waiting lobby only"
+    );
+    private static final List<String> LEAVE_ARENA_LORE_DEFAULT = Arrays.asList(
+            ChatColor.GRAY + "Right click to leave waiting queue.",
+            ChatColor.DARK_GRAY + "Waiting lobby only"
+    );
     private static final String TEAM_SELECTOR_TITLE = ChatColor.DARK_GREEN + "Choose Team";
-    private static final String TEAM_SELECTOR_NAME = ChatColor.GREEN + "Team Selector";
+    private static final String PDC_LOBBY_ITEM_KEY = "lobby_item";
+    private static final String TEAM_SELECTOR_MARKER = "team_selector";
+    private static final String LEAVE_ARENA_MARKER = "leave_arena";
 
     private final SopPillarsPlugin plugin;
+    private final NamespacedKey lobbyItemKey;
     private final Map<String, WaitingMatch> waitingMatches = new LinkedHashMap<String, WaitingMatch>();
     private final Map<String, RunningMatch> runningMatches = new LinkedHashMap<String, RunningMatch>();
     private final Map<String, RunningMatchEffects> runningEffects = new LinkedHashMap<String, RunningMatchEffects>();
@@ -66,6 +82,7 @@ public final class MatchManager {
 
     public MatchManager(SopPillarsPlugin plugin) {
         this.plugin = plugin;
+        this.lobbyItemKey = new NamespacedKey(plugin, PDC_LOBBY_ITEM_KEY);
     }
 
     public void reset() {
@@ -623,7 +640,31 @@ public final class MatchManager {
             return false;
         }
         ItemMeta meta = item.getItemMeta();
-        return meta != null && TEAM_SELECTOR_NAME.equals(meta.getDisplayName());
+        if (meta == null) {
+            return false;
+        }
+        String marker = meta.getPersistentDataContainer().get(lobbyItemKey, PersistentDataType.STRING);
+        if (TEAM_SELECTOR_MARKER.equals(marker)) {
+            return true;
+        }
+        // Backward compatibility with old items issued before PDC marker rollout.
+        return TEAM_SELECTOR_NAME_DEFAULT.equals(meta.getDisplayName());
+    }
+
+    public boolean isLeaveArenaItem(ItemStack item) {
+        if (item == null || item.getType() != Material.BARRIER || !item.hasItemMeta()) {
+            return false;
+        }
+        ItemMeta meta = item.getItemMeta();
+        if (meta == null) {
+            return false;
+        }
+        String marker = meta.getPersistentDataContainer().get(lobbyItemKey, PersistentDataType.STRING);
+        if (LEAVE_ARENA_MARKER.equals(marker)) {
+            return true;
+        }
+        // Backward compatibility with old items issued before PDC marker rollout.
+        return LEAVE_ARENA_NAME_DEFAULT.equals(meta.getDisplayName());
     }
 
     public boolean isTeamSelectorInventory(String title) {
@@ -1327,17 +1368,28 @@ public final class MatchManager {
 
     private void giveTeamSelector(Player player) {
         PlayerInventory inventory = player.getInventory();
-        inventory.setItem(TEAM_SELECTOR_SLOT, createTeamSelectorItem());
+        int teamSlot = getTeamSelectorSlot();
+        int leaveSlot = getLeaveArenaSlot(teamSlot);
+        inventory.setItem(teamSlot, createTeamSelectorItem());
+        inventory.setItem(leaveSlot, createLeaveArenaItem());
         player.updateInventory();
     }
 
     private void removeTeamSelector(Player player) {
         PlayerInventory inventory = player.getInventory();
-        ItemStack current = inventory.getItem(TEAM_SELECTOR_SLOT);
+        int teamSlot = getTeamSelectorSlot();
+        int leaveSlot = getLeaveArenaSlot(teamSlot);
+        ItemStack current = inventory.getItem(teamSlot);
         if (isTeamSelectorItem(current)) {
-            inventory.setItem(TEAM_SELECTOR_SLOT, null);
+            inventory.setItem(teamSlot, null);
         } else {
             removeMatchingItems(inventory);
+        }
+        ItemStack leaveCurrent = inventory.getItem(leaveSlot);
+        if (isLeaveArenaItem(leaveCurrent)) {
+            inventory.setItem(leaveSlot, null);
+        } else {
+            removeMatchingLeaveItems(inventory);
         }
         player.updateInventory();
     }
@@ -1446,15 +1498,35 @@ public final class MatchManager {
         }
     }
 
+    private void removeMatchingLeaveItems(PlayerInventory inventory) {
+        ItemStack[] contents = inventory.getContents();
+        for (int index = 0; index < contents.length; index++) {
+            if (isLeaveArenaItem(contents[index])) {
+                inventory.setItem(index, null);
+            }
+        }
+    }
+
     private ItemStack createTeamSelectorItem() {
         ItemStack item = new ItemStack(Material.COMPASS);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
-            meta.setDisplayName(TEAM_SELECTOR_NAME);
-            meta.setLore(Arrays.asList(
-                    ChatColor.GRAY + "Right click to choose your team.",
-                    ChatColor.DARK_GRAY + "Waiting lobby only"
-            ));
+            meta.setDisplayName(getTeamSelectorName());
+            meta.setLore(getTeamSelectorLore());
+            meta.getPersistentDataContainer().set(lobbyItemKey, PersistentDataType.STRING, TEAM_SELECTOR_MARKER);
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private ItemStack createLeaveArenaItem() {
+        ItemStack item = new ItemStack(Material.BARRIER);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(getLeaveArenaName());
+            meta.setLore(getLeaveArenaLore());
+            meta.getPersistentDataContainer().set(lobbyItemKey, PersistentDataType.STRING, LEAVE_ARENA_MARKER);
             meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
             item.setItemMeta(meta);
         }
@@ -1532,6 +1604,67 @@ public final class MatchManager {
         values.put(key1, value1);
         values.put(key2, value2);
         return values;
+    }
+
+    private int getTeamSelectorSlot() {
+        return clampHotbarSlot(plugin.getConfig().getInt("settings.waiting-items.team-selector.slot", TEAM_SELECTOR_SLOT_DEFAULT));
+    }
+
+    private int getLeaveArenaSlot(int teamSelectorSlot) {
+        int configured = clampHotbarSlot(plugin.getConfig().getInt("settings.waiting-items.leave-arena.slot", LEAVE_ARENA_SLOT_DEFAULT));
+        if (configured != teamSelectorSlot) {
+            return configured;
+        }
+        // Avoid overlap if admin accidentally configured same slot for both.
+        return configured == 8 ? 7 : 8;
+    }
+
+    private String getTeamSelectorName() {
+        String raw = plugin.getConfig().getString("settings.waiting-items.team-selector.name");
+        if (raw == null || raw.trim().isEmpty()) {
+            return TEAM_SELECTOR_NAME_DEFAULT;
+        }
+        return colorize(raw);
+    }
+
+    private List<String> getTeamSelectorLore() {
+        List<String> configured = plugin.getConfig().getStringList("settings.waiting-items.team-selector.lore");
+        if (configured == null || configured.isEmpty()) {
+            return TEAM_SELECTOR_LORE_DEFAULT;
+        }
+        return colorizeAll(configured);
+    }
+
+    private String getLeaveArenaName() {
+        String raw = plugin.getConfig().getString("settings.waiting-items.leave-arena.name");
+        if (raw == null || raw.trim().isEmpty()) {
+            return LEAVE_ARENA_NAME_DEFAULT;
+        }
+        return colorize(raw);
+    }
+
+    private List<String> getLeaveArenaLore() {
+        List<String> configured = plugin.getConfig().getStringList("settings.waiting-items.leave-arena.lore");
+        if (configured == null || configured.isEmpty()) {
+            return LEAVE_ARENA_LORE_DEFAULT;
+        }
+        return colorizeAll(configured);
+    }
+
+    private int clampHotbarSlot(int slot) {
+        return Math.max(0, Math.min(8, slot));
+    }
+
+    private String colorize(String text) {
+        return ChatColor.translateAlternateColorCodes('&', text == null ? "" : text);
+    }
+
+    private List<String> colorizeAll(List<String> lines) {
+        List<String> out = new ArrayList<String>(lines.size());
+        for (String line : lines) {
+            out.add(colorize(line));
+        }
+        return out;
     }
 
     private String normalize(String input) {
