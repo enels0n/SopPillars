@@ -166,11 +166,25 @@ public final class EditWizardManager {
         if (session == null) {
             return;
         }
-        if (session.currentStep() != Step.SET_END_SPAWN) {
+        PillarsArena arena = plugin.getArenaManager().getArena(session.arenaName);
+        if (arena == null) {
+            stop(player, true);
+            return;
+        }
+        if (!canSkipCurrentStep(session, arena)) {
             plugin.getMessageService().send(player, "wizard-skip-unavailable");
             return;
         }
-        session.stepIndex++;
+        if (session.currentStep() == Step.SET_TEAM_SPAWN) {
+            advanceSpawnSlot(session, arena);
+        } else {
+            session.stepIndex++;
+        }
+        if (session.isFinished()) {
+            plugin.getMessageService().send(player, "wizard-finished", mapOf("arena", arena.getName()));
+            stop(player, true);
+            return;
+        }
         installControls(player);
         sendStepHint(player);
     }
@@ -189,9 +203,12 @@ public final class EditWizardManager {
         Step step = session.currentStep();
         inv.setItem(SLOT_SET, controlItem(Material.LIME_DYE, "&aSet: &f" + step.display(session)));
         inv.setItem(SLOT_BACK, controlItem(Material.ARROW, "&eBack"));
-        inv.setItem(SLOT_SKIP, step == Step.SET_END_SPAWN
-                ? controlItem(Material.GRAY_DYE, "&7Skip (end spawn)")
-                : controlItem(Material.BARRIER, "&8Skip unavailable"));
+        PillarsArena arena = plugin.getArenaManager().getArena(session.arenaName);
+        boolean canSkip = arena != null && canSkipCurrentStep(session, arena);
+        String skipLabel = canSkip
+                ? (step == Step.SET_END_SPAWN ? "&7Skip (end spawn)" : "&7Skip (already configured)")
+                : "&8Skip unavailable";
+        inv.setItem(SLOT_SKIP, canSkip ? controlItem(Material.GRAY_DYE, skipLabel) : controlItem(Material.BARRIER, skipLabel));
         player.updateInventory();
     }
 
@@ -282,6 +299,28 @@ public final class EditWizardManager {
             return;
         }
         session.stepIndex = Math.max(0, session.stepIndex - 1);
+    }
+
+    private boolean canSkipCurrentStep(Session session, PillarsArena arena) {
+        Step step = session.currentStep();
+        switch (step) {
+            case GAMEPLAY_POS1:
+            case GAMEPLAY_POS2:
+                return arena.getGameplayArea() != null;
+            case LOBBY_POS1:
+            case LOBBY_POS2:
+                return arena.getLobbyArea() != null;
+            case SET_SPECTATOR:
+                return arena.getSpectatorSpawn() != null;
+            case SET_LOBBY_SPAWN:
+                return arena.getLobbySpawn() != null;
+            case SET_END_SPAWN:
+                return true;
+            case SET_TEAM_SPAWN:
+                return arena.getSpawn(session.spawnTeam, session.spawnSlot) != null;
+            default:
+                return false;
+        }
     }
 
     private boolean sameWorld(Location first, Location second) {

@@ -58,7 +58,7 @@ messages:
   wizard-step: "&eSetup step: &f%step% &7(hold slot 1=set, 2=back, 3=skip)."
   wizard-finished: "&aSetup wizard complete for &f%arena%&a. Run &f/pillars save &ato finish."
   wizard-back-unavailable: "&cAlready at the first setup step."
-  wizard-skip-unavailable: "&cSkip is available only for optional end spawn step."
+  wizard-skip-unavailable: "&cSkip is available only for already configured steps (or optional end spawn)."
   invalid-team-slot: "&cInvalid team or player slot for this arena."
   snapshot-saved: "&aBaseline snapshot saved for arena &f%arena%&a (rollback after matches)."
   snapshot-failed: "&cCould not save baseline snapshot for arena &f%arena%&c (check gameplay region and console)."

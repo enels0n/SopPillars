@@ -6,6 +6,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
+import org.bukkit.event.inventory.ClickType;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
 import org.bukkit.event.player.PlayerDropItemEvent;
@@ -66,6 +67,12 @@ public final class EditWizardListener implements Listener {
         if (!plugin.getEditWizardManager().isActive(player.getUniqueId())) {
             return;
         }
+        if (plugin.getLootListEditorManager().isLootListEditorTitle(event.getView().getTitle())) {
+            if (isControlSlotClick(event) || isControlHotbarSwap(event)) {
+                event.setCancelled(true);
+            }
+            return;
+        }
         event.setCancelled(true);
     }
 
@@ -75,8 +82,19 @@ public final class EditWizardListener implements Listener {
             return;
         }
         Player player = (Player) event.getWhoClicked();
-        if (plugin.getEditWizardManager().isActive(player.getUniqueId())) {
+        if (!plugin.getEditWizardManager().isActive(player.getUniqueId())) {
+            return;
+        }
+        if (!plugin.getLootListEditorManager().isLootListEditorTitle(event.getView().getTitle())) {
             event.setCancelled(true);
+            return;
+        }
+        int topSize = event.getView().getTopInventory().getSize();
+        for (int rawSlot : event.getRawSlots()) {
+            if (isControlRawSlot(rawSlot, topSize)) {
+                event.setCancelled(true);
+                return;
+            }
         }
     }
 
@@ -115,5 +133,24 @@ public final class EditWizardListener implements Listener {
         Long previous = lastWizardInteractAt.get(playerId);
         lastWizardInteractAt.put(playerId, now);
         return previous != null && (now - previous.longValue()) < 125L;
+    }
+
+    private boolean isControlSlotClick(InventoryClickEvent event) {
+        if (event.getClickedInventory() == null) {
+            return false;
+        }
+        if (event.getClickedInventory().equals(event.getWhoClicked().getInventory())) {
+            int slot = event.getSlot();
+            return slot >= 0 && slot <= 2;
+        }
+        return false;
+    }
+
+    private boolean isControlHotbarSwap(InventoryClickEvent event) {
+        return event.getClick() == ClickType.NUMBER_KEY && event.getHotbarButton() >= 0 && event.getHotbarButton() <= 2;
+    }
+
+    private boolean isControlRawSlot(int rawSlot, int topSize) {
+        return rawSlot >= (topSize + 36) && rawSlot <= (topSize + 38);
     }
 }
