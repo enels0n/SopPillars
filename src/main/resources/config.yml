@@ -148,6 +148,11 @@ settings:
   default-pre-border-delay-seconds: 30
   default-border-shrink-seconds: 120
   default-end-border-diameter: 12.0
+  fake-border:
+    outside-damage:
+      # Damage is applied to alive players outside the shrinking match border.
+      period-ticks: 10
+      amount: 1.0
   default-lava-enabled: false
   default-lava-start-delay-seconds: 90
   default-lava-rise-interval-seconds: 10

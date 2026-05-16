@@ -79,6 +79,8 @@ public final class MatchManager {
     private final Map<UUID, SavedPlayerState> savedStateByPlayer = new HashMap<UUID, SavedPlayerState>();
     private final Map<UUID, Long> lastLobbyBoundsTeleportAt = new HashMap<UUID, Long>();
     private BukkitTask tickerTask;
+    private BukkitTask borderDamageTask;
+    private int borderTickCounter;
 
     public MatchManager(SopPillarsPlugin plugin) {
         this.plugin = plugin;
@@ -89,6 +91,10 @@ public final class MatchManager {
         if (tickerTask != null) {
             tickerTask.cancel();
             tickerTask = null;
+        }
+        if (borderDamageTask != null) {
+            borderDamageTask.cancel();
+            borderDamageTask = null;
         }
         clearSopPartyReservationsForTrackedPlayers();
         for (RunningMatchEffects effects : new ArrayList<RunningMatchEffects>(runningEffects.values())) {
@@ -107,17 +113,77 @@ public final class MatchManager {
         savedStateByPlayer.clear();
     }
 
+    public void shutdownAndEvacuate() {
+        if (tickerTask != null) {
+            tickerTask.cancel();
+            tickerTask = null;
+        }
+        if (borderDamageTask != null) {
+            borderDamageTask.cancel();
+            borderDamageTask = null;
+        }
+
+        Set<UUID> evacuateIds = new LinkedHashSet<UUID>();
+        evacuateIds.addAll(savedStateByPlayer.keySet());
+        evacuateIds.addAll(arenaByPlayer.keySet());
+        evacuateIds.addAll(respawnArenaByPlayer.keySet());
+
+        clearSopPartyReservationsForTrackedPlayers();
+        for (RunningMatchEffects effects : new ArrayList<RunningMatchEffects>(runningEffects.values())) {
+            effects.cleanup();
+        }
+        runningEffects.clear();
+        for (RunningMatch match : new ArrayList<RunningMatch>(runningMatches.values())) {
+            match.restoreHiddenLobbyBlocks();
+        }
+        waitingMatches.clear();
+        runningMatches.clear();
+        arenaByPlayer.clear();
+        respawnArenaByPlayer.clear();
+        lastLobbyBoundsTeleportAt.clear();
+
+        for (UUID playerId : evacuateIds) {
+            Player player = Bukkit.getPlayer(playerId);
+            if (player == null || !player.isOnline()) {
+                continue;
+            }
+            cleanupLobbyState(player);
+            player.closeInventory();
+            player.setInvulnerable(false);
+            player.setCanPickupItems(true);
+            player.setAllowFlight(false);
+            player.setFlying(false);
+            player.setFireTicks(0);
+            player.setFallDistance(0.0F);
+            restorePlayerState(player);
+            refillVitals(player);
+            teleportToGlobalSpawn(player);
+        }
+        savedStateByPlayer.clear();
+    }
+
     public void startTicker() {
         if (tickerTask != null) {
             tickerTask.cancel();
         }
+        if (borderDamageTask != null) {
+            borderDamageTask.cancel();
+        }
+        borderTickCounter = 0;
         tickerTask = Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
             @Override
             public void run() {
+                tickPartyMembershipConsistency();
                 tickWaitingMatches();
                 tickRunningEffects();
             }
         }, 20L, 20L);
+        borderDamageTask = Bukkit.getScheduler().runTaskTimer(plugin, new Runnable() {
+            @Override
+            public void run() {
+                tickBorderDamage();
+            }
+        }, 1L, 1L);
     }
 
     public boolean joinArena(Player player, PillarsArena arena) {
@@ -193,6 +259,7 @@ public final class MatchManager {
             arenaByPlayer.put(memberId, normalizedArenaName);
             teleportToLobby(member, arena);
             clearPlayerForWaitingLobby(member);
+            refillVitals(member);
             giveTeamSelector(member);
             member.setGameMode(GameMode.SURVIVAL);
             plugin.getMessageService().send(member, "joined-arena", replacements(
@@ -289,6 +356,7 @@ public final class MatchManager {
             }
             return;
         }
+        leavePartyFollowersIfLeader(player, arenaName, dueToQuit);
 
         WaitingMatch waitingMatch = waitingMatches.get(arenaName);
         if (waitingMatch != null) {
@@ -298,6 +366,7 @@ public final class MatchManager {
             }
             cleanupLobbyState(player);
             restorePlayerState(player);
+            refillVitals(player);
             teleportToGlobalSpawn(player);
             if (!dueToQuit) {
                 plugin.getMessageService().send(player, "left-arena");
@@ -316,6 +385,7 @@ public final class MatchManager {
             cleanupRunningState(player);
             if (!dueToQuit) {
                 restorePlayerState(player);
+                refillVitals(player);
                 teleportToGlobalSpawn(player);
                 plugin.getMessageService().send(player, "match-forfeit", replacement("arena", runningMatch.getArena().getName()));
             } else if (wasAlive) {
@@ -325,6 +395,33 @@ public final class MatchManager {
             }
             checkForWinner(runningMatch);
             clearSopPartyReservationIfAbandoned(player, arenaName);
+        }
+    }
+
+    /**
+     * If party leader leaves the current arena, all online followers tracked in the same arena leave too.
+     */
+    private void leavePartyFollowersIfLeader(Player actor, String normalizedArenaName, boolean dueToQuit) {
+        SopPartyApi api = SopPartyServices.get();
+        if (api == null) {
+            return;
+        }
+        if (!api.isInParty(actor) || !api.isLeader(actor)) {
+            return;
+        }
+        List<UUID> party = dedupeParty(plugin.getPartyBridge().getMemberUuids(actor));
+        for (UUID memberId : party) {
+            if (memberId.equals(actor.getUniqueId())) {
+                continue;
+            }
+            if (!normalizedArenaName.equals(arenaByPlayer.get(memberId))) {
+                continue;
+            }
+            Player member = Bukkit.getPlayer(memberId);
+            if (member == null) {
+                continue;
+            }
+            leaveArena(member, dueToQuit);
         }
     }
 
@@ -823,6 +920,12 @@ public final class MatchManager {
         if (!api.isInParty(leaver)) {
             return;
         }
+        String expectedKey = SOPPILLARS_RESERVATION_PREFIX + normalizedArenaName;
+        Optional<String> reservation = api.getPartyReservationGameKey(leaver);
+        if (reservation.isPresent() && !expectedKey.equals(reservation.get().trim())) {
+            // Party reservation points to another arena/key; do not clear it from this leave path.
+            return;
+        }
         List<UUID> party = dedupeParty(plugin.getPartyBridge().getMemberUuids(leaver));
         for (UUID memberId : party) {
             if (memberId.equals(leaver.getUniqueId())) {
@@ -866,6 +969,107 @@ public final class MatchManager {
 
     private List<UUID> dedupeParty(List<UUID> raw) {
         return new ArrayList<UUID>(new LinkedHashSet<UUID>(raw));
+    }
+
+    /**
+     * Keeps SopPillars arena state coherent with current SopParty composition.
+     * If a follower joins a party while inside another arena, they are moved to leader's waiting arena when possible;
+     * otherwise they are removed from the current arena.
+     */
+    private void tickPartyMembershipConsistency() {
+        SopPartyApi api = SopPartyServices.get();
+        if (api == null) {
+            return;
+        }
+        for (UUID memberId : new ArrayList<UUID>(arenaByPlayer.keySet())) {
+            String memberArenaName = arenaByPlayer.get(memberId);
+            if (memberArenaName == null) {
+                continue;
+            }
+            // Only enforce party sync while player is in waiting lobby flow.
+            // Running matches must not be interrupted by late party joins.
+            WaitingMatch memberWaiting = waitingMatches.get(memberArenaName);
+            if (memberWaiting == null) {
+                continue;
+            }
+            ArenaState memberState = memberWaiting.getArena().getState();
+            if (memberState != ArenaState.WAITING && memberState != ArenaState.STARTING) {
+                continue;
+            }
+            Player member = Bukkit.getPlayer(memberId);
+            if (member == null) {
+                continue;
+            }
+            if (!api.isInParty(member) || api.isLeader(member)) {
+                continue;
+            }
+            UUID leaderId = api.getLeaderUuid(member).orElse(null);
+            if (leaderId == null || leaderId.equals(memberId)) {
+                continue;
+            }
+            String leaderArenaName = arenaByPlayer.get(leaderId);
+            if (leaderArenaName != null && leaderArenaName.equals(memberArenaName)) {
+                continue;
+            }
+            if (leaderArenaName != null && moveFollowerToLeadersWaitingArena(member, memberArenaName, leaderArenaName, leaderId)) {
+                continue;
+            }
+            leaveArena(member, false);
+        }
+    }
+
+    /**
+     * Returns true if follower was moved from current arena to leader's waiting arena.
+     */
+    private boolean moveFollowerToLeadersWaitingArena(Player follower, String followerArenaName, String leaderArenaName, UUID leaderId) {
+        WaitingMatch leaderWaiting = waitingMatches.get(leaderArenaName);
+        if (leaderWaiting == null || !leaderWaiting.canJoin()) {
+            return false;
+        }
+        PillarsArena targetArena = leaderWaiting.getArena();
+        if (targetArena.getState() != ArenaState.WAITING && targetArena.getState() != ArenaState.STARTING) {
+            return false;
+        }
+        if (targetArena.getLobbyArea() == null) {
+            return false;
+        }
+        if (!follower.isOp() && !follower.hasPermission("soppillars.play")) {
+            return false;
+        }
+
+        leaveArena(follower, false);
+        if (arenaByPlayer.containsKey(follower.getUniqueId())) {
+            return false;
+        }
+        if (leaderWaiting.size() + 1 > targetArena.getMaxPlayers()) {
+            return false;
+        }
+
+        int team = leaderWaiting.getTeam(leaderId);
+        if (team <= 0 || !leaderWaiting.hasFreeSlotInTeam(team)) {
+            Map<UUID, Integer> fallback = assignPartyToTeams(targetArena, leaderWaiting, Collections.singletonList(follower.getUniqueId()));
+            if (fallback == null) {
+                return false;
+            }
+            Integer assigned = fallback.get(follower.getUniqueId());
+            if (assigned == null) {
+                return false;
+            }
+            team = assigned.intValue();
+        }
+
+        snapshotPlayerState(follower);
+        leaderWaiting.addPlayer(follower.getUniqueId(), team);
+        arenaByPlayer.put(follower.getUniqueId(), leaderArenaName);
+        teleportToLobby(follower, targetArena);
+        clearPlayerForWaitingLobby(follower);
+        giveTeamSelector(follower);
+        follower.setGameMode(GameMode.SURVIVAL);
+        plugin.getMessageService().send(follower, "joined-arena", replacements(
+                "arena", targetArena.getName(),
+                "team", String.valueOf(team)
+        ));
+        return true;
     }
 
     private List<UUID> resolvePartyJoinGroup(Player player) {
@@ -927,10 +1131,59 @@ public final class MatchManager {
         }
     }
 
+    private void tickBorderDamage() {
+        int periodTicks = getOutsideBorderDamagePeriodTicks();
+        if (periodTicks <= 0 || runningMatches.isEmpty()) {
+            return;
+        }
+        borderTickCounter++;
+        if (borderTickCounter % periodTicks != 0) {
+            return;
+        }
+        double damage = getOutsideBorderDamageAmount();
+        if (damage <= 0.0D) {
+            return;
+        }
+        for (Map.Entry<String, RunningMatch> entry : runningMatches.entrySet()) {
+            RunningMatch match = entry.getValue();
+            if (match.getArena().getState() != ArenaState.RUNNING) {
+                continue;
+            }
+            RunningMatchEffects effects = runningEffects.get(entry.getKey());
+            if (effects == null) {
+                continue;
+            }
+            for (UUID playerId : match.getPlayers()) {
+                if (!match.isAlive(playerId)) {
+                    continue;
+                }
+                Player player = Bukkit.getPlayer(playerId);
+                if (player == null || !player.isOnline()) {
+                    continue;
+                }
+                if (effects.isOutsideFakeBorder(player.getLocation())) {
+                    player.damage(damage);
+                }
+            }
+        }
+    }
+
+    private int getOutsideBorderDamagePeriodTicks() {
+        return Math.max(1, plugin.getConfig().getInt("settings.fake-border.outside-damage.period-ticks", 10));
+    }
+
+    private double getOutsideBorderDamageAmount() {
+        return Math.max(0.0D, plugin.getConfig().getDouble("settings.fake-border.outside-damage.amount", 1.0D));
+    }
+
     private void tickWaitingMatches() {
         List<String> emptyMatches = new ArrayList<String>();
-        for (Map.Entry<String, WaitingMatch> entry : waitingMatches.entrySet()) {
+        List<Map.Entry<String, WaitingMatch>> snapshot = new ArrayList<Map.Entry<String, WaitingMatch>>(waitingMatches.entrySet());
+        for (Map.Entry<String, WaitingMatch> entry : snapshot) {
             WaitingMatch match = entry.getValue();
+            if (match == null || waitingMatches.get(entry.getKey()) != match) {
+                continue;
+            }
             PillarsArena arena = match.getArena();
 
             if (match.isEmpty()) {
@@ -1153,6 +1406,7 @@ public final class MatchManager {
             player.setCanPickupItems(true);
             cleanupRunningState(player);
             restorePlayerState(player);
+            refillVitals(player);
             teleportToGlobalSpawn(player);
         }
         match.restoreHiddenLobbyBlocks();
@@ -1312,6 +1566,18 @@ public final class MatchManager {
         return match != null && !match.isAlive(player.getUniqueId());
     }
 
+    public boolean isOutsideFakeBorder(Player player, Location location) {
+        if (player == null || location == null) {
+            return false;
+        }
+        RunningMatch running = getRunningMatch(player.getUniqueId());
+        if (running == null) {
+            return false;
+        }
+        RunningMatchEffects effects = runningEffects.get(normalize(running.getArena().getName()));
+        return effects != null && effects.isOutsideFakeBorder(location);
+    }
+
     public boolean isEndingWinnerProtected(Player player) {
         RunningMatch match = getRunningMatch(player.getUniqueId());
         if (match == null || match.getArena().getState() != ArenaState.ENDING) {
@@ -1410,8 +1676,7 @@ public final class MatchManager {
         player.getInventory().clear();
         player.getInventory().setArmorContents(null);
         player.getInventory().setItemInOffHand(null);
-        player.setHealth(player.getMaxHealth());
-        player.setFoodLevel(20);
+        refillVitals(player);
         player.setFireTicks(0);
         player.setExp(0.0F);
         player.setLevel(0);
@@ -1423,6 +1688,13 @@ public final class MatchManager {
         player.getInventory().setArmorContents(null);
         player.getInventory().setItemInOffHand(null);
         player.updateInventory();
+    }
+
+    private void refillVitals(Player player) {
+        player.setHealth(player.getMaxHealth());
+        player.setFoodLevel(20);
+        player.setSaturation(20.0F);
+        player.setExhaustion(0.0F);
     }
 
     private void prepareWinnerForCelebration(Player player) {

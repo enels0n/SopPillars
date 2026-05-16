@@ -96,7 +96,7 @@ public final class SopPillarsPlugin extends JavaPlugin implements Listener {
     @Override
     public void onDisable() {
         if (this.matchManager != null) {
-            this.matchManager.reset();
+            this.matchManager.shutdownAndEvacuate();
         }
         if (this.cageManager != null) {
             this.cageManager.clearAll();

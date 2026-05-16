@@ -11,25 +11,31 @@ import org.bukkit.Material;
 import org.bukkit.World;
 import org.bukkit.WorldBorder;
 import org.bukkit.block.Block;
+import org.bukkit.entity.Player;
+
+import java.lang.reflect.Method;
 
 import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Per-match world border animation and optional rising lava. Vanilla world border is per-world;
- * only one SopPillars match should run per world when these effects are enabled.
+ * Per-match fake border timings and optional rising lava.
  */
 public final class RunningMatchEffects {
+
+    private static boolean visibleBorderUnsupportedLogged;
 
     private final SopPillarsPlugin plugin;
     private final MatchManager matchManager;
     private final RunningMatch match;
 
-    private WorldBorderBackup borderBackup;
-    private boolean borderConfigured;
+    private boolean fakeBorderConfigured;
     private boolean shrinkApplied;
+    private boolean visibleBorderShrinkStarted;
     private double initialDiameter;
-    private static final double ACTIVE_BORDER_DAMAGE_BUFFER = 0.1D;
+    private double targetDiameter;
+    private double borderCenterX;
+    private double borderCenterZ;
     private int endingStartedAtElapsed = -1;
 
     private int elapsedSeconds;
@@ -38,6 +44,7 @@ public final class RunningMatchEffects {
     private int nextLavaY;
     private boolean lavaFinished;
     private final List<Location> lavaChanges = new ArrayList<Location>();
+    private WorldBorder visibleBorder;
 
     public RunningMatchEffects(SopPillarsPlugin plugin, MatchManager matchManager, RunningMatch match) {
         this.plugin = plugin;
@@ -53,31 +60,19 @@ public final class RunningMatchEffects {
         if (area == null) {
             return;
         }
-        World world = Bukkit.getWorld(area.getMin().getWorld());
-        if (world == null) {
-            return;
-        }
-
-        if (matchManager.hasOtherRunningMatchInSameWorld(arena.getWorldName(), arena.getName())) {
-            plugin.getLogger().warning("[SopPillars] Skipping world border and lava for arena "
-                    + arena.getName() + " because another match is already active in world " + arena.getWorldName() + ".");
-            return;
-        }
-
-        WorldBorder border = world.getWorldBorder();
-        borderBackup = WorldBorderBackup.capture(border);
-
-        Location center = area.getCenter(world);
-        border.setCenter(center.getX(), center.getZ());
-
+        double minX = Math.min(area.getMin().getX(), area.getMax().getX());
+        double maxX = Math.max(area.getMin().getX(), area.getMax().getX());
+        double minZ = Math.min(area.getMin().getZ(), area.getMax().getZ());
+        double maxZ = Math.max(area.getMin().getZ(), area.getMax().getZ());
+        borderCenterX = (minX + maxX) / 2.0D;
+        borderCenterZ = (minZ + maxZ) / 2.0D;
         initialDiameter = computeCoverDiameter(area);
-        border.setSize(initialDiameter);
-        // Make border punishment start almost immediately after crossing the border line.
-        border.setDamageBuffer(ACTIVE_BORDER_DAMAGE_BUFFER);
-
-        borderConfigured = true;
+        targetDiameter = clampEndDiameter(arena.getSettings(), initialDiameter);
+        fakeBorderConfigured = true;
         lavaAllowed = arena.getSettings().isLavaEnabled();
         nextLavaY = (int) Math.floor(Math.min(area.getMin().getY(), area.getMax().getY()));
+        visibleBorder = createVisibleBorderReflective();
+        initializeVisibleBorder();
     }
 
     public void tickSecond() {
@@ -88,22 +83,11 @@ public final class RunningMatchEffects {
             endingStartedAtElapsed = elapsedSeconds;
         }
 
-        if (borderConfigured && !shrinkApplied && borderBackup != null) {
+        if (fakeBorderConfigured && !shrinkApplied) {
             int shrinkAt = settings.getCageSeconds() + settings.getPreBorderDelaySeconds();
             if (elapsedSeconds >= shrinkAt) {
-                SerializedCuboid area = arena.getGameplayArea();
-                if (area != null) {
-                    World world = Bukkit.getWorld(area.getMin().getWorld());
-                    if (world != null && initialDiameter > 0.0D) {
-                        WorldBorder border = world.getWorldBorder();
-                        double target = clampEndDiameter(settings, initialDiameter);
-                        if (target < initialDiameter - 0.5D) {
-                            long shrinkDuration = Math.max(1L, (long) settings.getBorderShrinkSeconds());
-                            border.setSize(target, shrinkDuration);
-                        }
-                    }
-                }
                 shrinkApplied = true;
+                startVisibleBorderShrink();
             }
         }
 
@@ -132,7 +116,6 @@ public final class RunningMatchEffects {
                 }
             }
         }
-
         tickLoot(settings);
     }
 
@@ -184,18 +167,7 @@ public final class RunningMatchEffects {
     }
 
     public void cleanup() {
-        if (borderConfigured && borderBackup != null) {
-            PillarsArena arena = match.getArena();
-            SerializedCuboid area = arena.getGameplayArea();
-            if (area != null) {
-                World world = Bukkit.getWorld(area.getMin().getWorld());
-                if (world != null) {
-                    borderBackup.restore(world.getWorldBorder());
-                }
-            }
-            borderBackup = null;
-        }
-
+        clearVisibleBorder();
         for (Location loc : lavaChanges) {
             World world = loc.getWorld();
             if (world == null) {
@@ -207,6 +179,19 @@ public final class RunningMatchEffects {
             }
         }
         lavaChanges.clear();
+    }
+
+    public boolean isOutsideFakeBorder(Location location) {
+        if (!fakeBorderConfigured || location == null || location.getWorld() == null) {
+            return false;
+        }
+        if (!location.getWorld().getName().equalsIgnoreCase(match.getArena().getWorldName())) {
+            return false;
+        }
+        double radius = Math.max(0.5D, getCurrentBorderDiameter() / 2.0D);
+        double dx = Math.abs(location.getX() - borderCenterX);
+        double dz = Math.abs(location.getZ() - borderCenterZ);
+        return dx > radius || dz > radius;
     }
 
     private void riseLavaLayer(World world, SerializedCuboid area, int y) {
@@ -231,6 +216,21 @@ public final class RunningMatchEffects {
         return Math.max(16.0D, diagonal + 4.0D);
     }
 
+    private double getCurrentBorderDiameter() {
+        if (!fakeBorderConfigured) {
+            return 0.0D;
+        }
+        ArenaSettings settings = match.getArena().getSettings();
+        int shrinkAt = settings.getCageSeconds() + settings.getPreBorderDelaySeconds();
+        if (elapsedSeconds <= shrinkAt) {
+            return initialDiameter;
+        }
+        int shrinkSeconds = Math.max(1, settings.getBorderShrinkSeconds());
+        double progress = (double) (elapsedSeconds - shrinkAt) / (double) shrinkSeconds;
+        progress = Math.max(0.0D, Math.min(1.0D, progress));
+        return initialDiameter + ((targetDiameter - initialDiameter) * progress);
+    }
+
     private static double clampEndDiameter(ArenaSettings settings, double initialDiameter) {
         double requested = settings.getEndBorderDiameter();
         if (requested < 1.0D) {
@@ -241,4 +241,93 @@ public final class RunningMatchEffects {
         }
         return requested;
     }
+
+    private WorldBorder createVisibleBorderReflective() {
+        try {
+            Method bukkitFactory = Bukkit.class.getMethod("createWorldBorder");
+            Object created = bukkitFactory.invoke(null);
+            return created instanceof WorldBorder ? (WorldBorder) created : null;
+        } catch (Exception ignored) {
+        }
+        try {
+            Method serverFactory = Bukkit.getServer().getClass().getMethod("createWorldBorder");
+            Object created = serverFactory.invoke(Bukkit.getServer());
+            return created instanceof WorldBorder ? (WorldBorder) created : null;
+        } catch (Exception ignored) {
+        }
+        if (!visibleBorderUnsupportedLogged) {
+            visibleBorderUnsupportedLogged = true;
+            plugin.getLogger().warning("Visible match border is not supported by this runtime API path; using damage-only fake border.");
+        }
+        return null;
+    }
+
+    private void initializeVisibleBorder() {
+        if (visibleBorder == null) {
+            return;
+        }
+        visibleBorder.setCenter(borderCenterX, borderCenterZ);
+        visibleBorder.setSize(Math.max(1.0D, initialDiameter));
+        visibleBorder.setDamageAmount(0.0D);
+        visibleBorder.setDamageBuffer(0.0D);
+        visibleBorder.setWarningDistance(2);
+        visibleBorder.setWarningTime(0);
+        applyVisibleBorderToPlayers();
+    }
+
+    private void startVisibleBorderShrink() {
+        if (visibleBorder == null || visibleBorderShrinkStarted) {
+            return;
+        }
+        visibleBorder.setCenter(borderCenterX, borderCenterZ);
+        visibleBorder.setDamageAmount(0.0D);
+        visibleBorder.setDamageBuffer(0.0D);
+        visibleBorder.setWarningDistance(2);
+        visibleBorder.setWarningTime(0);
+        visibleBorder.setSize(Math.max(1.0D, targetDiameter), Math.max(1L, (long) match.getArena().getSettings().getBorderShrinkSeconds()));
+        visibleBorderShrinkStarted = true;
+        applyVisibleBorderToPlayers();
+    }
+
+    private void applyVisibleBorderToPlayers() {
+        if (visibleBorder == null) {
+            return;
+        }
+        for (java.util.UUID playerId : match.getPlayers()) {
+            Player player = Bukkit.getPlayer(playerId);
+            if (player == null || !player.isOnline()) {
+                continue;
+            }
+            try {
+                Method setter = player.getClass().getMethod("setWorldBorder", WorldBorder.class);
+                setter.invoke(player, visibleBorder);
+            } catch (Exception ignored) {
+                if (!visibleBorderUnsupportedLogged) {
+                    visibleBorderUnsupportedLogged = true;
+                    plugin.getLogger().warning("Visible match border player assignment is not supported by this runtime API path; using damage-only fake border.");
+                }
+                visibleBorder = null;
+                return;
+            }
+        }
+    }
+
+    private void clearVisibleBorder() {
+        if (visibleBorder == null) {
+            return;
+        }
+        for (java.util.UUID playerId : match.getPlayers()) {
+            Player player = Bukkit.getPlayer(playerId);
+            if (player == null || !player.isOnline()) {
+                continue;
+            }
+            try {
+                Method setter = player.getClass().getMethod("setWorldBorder", WorldBorder.class);
+                setter.invoke(player, new Object[] { null });
+            } catch (Exception ignored) {
+                return;
+            }
+        }
+    }
+
 }

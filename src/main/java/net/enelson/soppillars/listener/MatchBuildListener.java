@@ -36,6 +36,11 @@ public final class MatchBuildListener implements Listener {
             event.setCancelled(true);
             return;
         }
+        if (plugin.getMatchManager().isOutsideFakeBorder(player, event.getBlock().getLocation())) {
+            event.setCancelled(true);
+            plugin.getMessageService().send(player, "match-build-place-denied");
+            return;
+        }
         SerializedCuboid gameplay = match.getArena().getGameplayArea();
         if (gameplay == null || !gameplay.contains(event.getBlock().getLocation())) {
             return;
@@ -118,6 +123,11 @@ public final class MatchBuildListener implements Listener {
             return;
         }
         Block fluid = event.getBlockClicked().getRelative(event.getBlockFace());
+        if (plugin.getMatchManager().isOutsideFakeBorder(player, fluid.getLocation())) {
+            event.setCancelled(true);
+            plugin.getMessageService().send(player, "match-build-place-denied");
+            return;
+        }
         SerializedCuboid gameplay = match.getArena().getGameplayArea();
         if (gameplay == null || !gameplay.contains(fluid.getLocation())) {
             return;

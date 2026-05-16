@@ -4,8 +4,9 @@ import net.enelson.soppillars.SopPillarsPlugin;
 import net.enelson.soppillars.arena.PillarsArena;
 import net.enelson.soppillars.model.SerializedCuboid;
 import net.enelson.soppillars.model.SerializedLocation;
-import net.kyori.adventure.text.Component;
-import net.kyori.adventure.text.format.NamedTextColor;
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.ChatColor;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.entity.Player;
@@ -220,23 +221,22 @@ public final class EditWizardManager {
         PillarsArena arena = plugin.getArenaManager().getArena(session.arenaName);
         String stepLabel = session.currentStep().display(session);
         plugin.getMessageService().send(player, "wizard-step", mapOf("step", stepLabel));
-        player.sendActionBar(buildProgressText(session, arena, stepLabel));
+        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(buildProgressText(session, arena, stepLabel)));
     }
 
-    private Component buildProgressText(Session session, PillarsArena arena, String stepLabel) {
+    private String buildProgressText(Session session, PillarsArena arena, String stepLabel) {
         int stepNumber = Math.min(session.stepIndex + 1, Session.ORDER.length);
         int total = Session.ORDER.length;
         if (session.currentStep() != Step.SET_TEAM_SPAWN || arena == null) {
-            return Component.text("Step " + stepNumber + "/" + total + ": ", NamedTextColor.GOLD)
-                    .append(Component.text(stepLabel, NamedTextColor.YELLOW));
+            return ChatColor.GOLD + "Step " + stepNumber + "/" + total + ": " + ChatColor.YELLOW + stepLabel;
         }
         int perTeam = Math.max(1, arena.getPlayersPerTeam());
         int teams = Math.max(1, arena.getTeams());
         int spawnIndex = Math.max(1, (session.spawnTeam - 1) * perTeam + session.spawnSlot);
         int spawnTotal = teams * perTeam;
-        return Component.text("Step " + stepNumber + "/" + total + " ", NamedTextColor.GOLD)
-                .append(Component.text("(" + spawnIndex + "/" + spawnTotal + "): ", NamedTextColor.GRAY))
-                .append(Component.text(stepLabel, NamedTextColor.YELLOW));
+        return ChatColor.GOLD + "Step " + stepNumber + "/" + total + " "
+                + ChatColor.GRAY + "(" + spawnIndex + "/" + spawnTotal + "): "
+                + ChatColor.YELLOW + stepLabel;
     }
 
     private void trySaveGameplayArea(Player player, PillarsArena arena) {

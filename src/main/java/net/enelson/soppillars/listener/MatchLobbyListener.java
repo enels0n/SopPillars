@@ -7,6 +7,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.InventoryDragEvent;
+import org.bukkit.event.player.PlayerDropItemEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
@@ -71,5 +72,13 @@ public final class MatchLobbyListener implements Listener {
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         plugin.getMatchManager().handleJoin(event.getPlayer());
+    }
+
+    @EventHandler
+    public void onDrop(PlayerDropItemEvent event) {
+        if (!plugin.getMatchManager().isLobbyProtected(event.getPlayer())) {
+            return;
+        }
+        event.setCancelled(true);
     }
 }
