@@ -5,8 +5,6 @@ import net.enelson.soppillars.model.ArenaSettings;
 import net.enelson.soppillars.model.SerializedCuboid;
 import net.enelson.soppillars.model.SerializedLocation;
 import net.enelson.soppillars.model.VictoryEffectShape;
-import net.enelson.soppillars.model.VictoryEffectType;
-import org.bukkit.Material;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
@@ -365,13 +363,11 @@ public final class ArenaManager {
         section.set("loot.blacklist", new ArrayList<String>(settings.getLootBlacklist()));
         section.set("allowed-commands", new ArrayList<String>(settings.getAllowedCommands()));
         section.set("celebration-seconds", settings.getCelebrationSeconds());
-        section.set("victory-effect.type", settings.getVictoryEffectType().name().toLowerCase(Locale.ROOT));
         section.set("victory-effect.shape", settings.getVictoryEffectShape().name().toLowerCase(Locale.ROOT));
         section.set("victory-effect.radius", settings.getVictoryEffectRadius());
         section.set("victory-effect.interval-ticks", settings.getVictoryEffectIntervalTicks());
         section.set("victory-effect.spawn-height", settings.getVictoryEffectSpawnHeight());
         section.set("victory-effect.amount-per-wave", settings.getVictoryEffectAmountPerWave());
-        section.set("victory-effect.block-material", settings.getVictoryEffectBlockMaterial().name());
         section.set("victory-commands", new ArrayList<String>(settings.getVictoryCommands()));
     }
 
@@ -408,29 +404,15 @@ public final class ArenaManager {
         defaults.setLootBlacklist(section.getStringList("loot.blacklist"));
         defaults.setAllowedCommands(section.getStringList("allowed-commands"));
         defaults.setCelebrationSeconds(section.getInt("celebration-seconds", defaults.getCelebrationSeconds()));
-        defaults.setVictoryEffectType(VictoryEffectType.parse(section.getString("victory-effect.type"), defaults.getVictoryEffectType()));
         defaults.setVictoryEffectShape(VictoryEffectShape.parse(section.getString("victory-effect.shape"), defaults.getVictoryEffectShape()));
         defaults.setVictoryEffectRadius(section.getDouble("victory-effect.radius", defaults.getVictoryEffectRadius()));
         defaults.setVictoryEffectIntervalTicks(section.getInt("victory-effect.interval-ticks", defaults.getVictoryEffectIntervalTicks()));
         defaults.setVictoryEffectSpawnHeight(section.getDouble("victory-effect.spawn-height", defaults.getVictoryEffectSpawnHeight()));
         defaults.setVictoryEffectAmountPerWave(section.getInt("victory-effect.amount-per-wave", defaults.getVictoryEffectAmountPerWave()));
-        defaults.setVictoryEffectBlockMaterial(parseMaterial(section.getString("victory-effect.block-material"), defaults.getVictoryEffectBlockMaterial()));
         if (section.contains("victory-commands")) {
             defaults.setVictoryCommands(section.getStringList("victory-commands"));
         }
         return defaults;
-    }
-
-    private Material parseMaterial(String raw, Material fallback) {
-        if (raw == null || raw.trim().isEmpty()) {
-            return fallback;
-        }
-        try {
-            Material material = Material.valueOf(raw.trim().toUpperCase(Locale.ROOT));
-            return material == null ? fallback : material;
-        } catch (IllegalArgumentException ignored) {
-            return fallback;
-        }
     }
 
     private String normalize(String input) {

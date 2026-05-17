@@ -213,7 +213,7 @@ public final class MatchManager {
             return false;
         }
 
-        if (arena.getState() != ArenaState.WAITING && arena.getState() != ArenaState.STARTING) {
+        if (arena.getState() != ArenaState.WAITING) {
             plugin.getMessageService().send(player, "arena-not-joinable", replacement("arena", arena.getName()));
             return false;
         }
@@ -287,7 +287,7 @@ public final class MatchManager {
         List<PillarsArena> preferredEmpty = new ArrayList<PillarsArena>();
 
         for (PillarsArena arena : plugin.getArenaManager().getArenas()) {
-            if ((arena.getState() != ArenaState.WAITING && arena.getState() != ArenaState.STARTING) || arena.getLobbyArea() == null) {
+            if (arena.getState() != ArenaState.WAITING || arena.getLobbyArea() == null) {
                 continue;
             }
             if (!requestedModes.isEmpty() && !containsMode(requestedModes, arena.getMode())) {
@@ -485,11 +485,13 @@ public final class MatchManager {
     }
 
     private void finishEliminationCore(Player victim, RunningMatch match, DeathBroadcastResolver.DeathContext ctx) {
+        Location deathLocation = victim.getLocation().clone();
         plugin.getStatistics().recordDeath(victim.getUniqueId());
         if (ctx.getAttackingPlayer() != null) {
             plugin.getStatistics().recordKill(ctx.getAttackingPlayer().getUniqueId());
         }
         match.setAlive(victim.getUniqueId(), false);
+        playDeathAndKillCosmetics(victim, ctx.getAttackingPlayer(), deathLocation);
         broadcast(match, ctx.getMessageKey(), deathReplacements(victim, match, ctx));
         if (match.getAlivePlayersInTeam(match.getTeam(victim.getUniqueId())) == 0) {
             broadcast(match, "team-eliminated", replacements(
@@ -498,6 +500,17 @@ public final class MatchManager {
             ));
         }
         checkForWinner(match);
+    }
+
+    private void playDeathAndKillCosmetics(Player victim, Player killer, Location deathLocation) {
+        if (deathLocation == null || deathLocation.getWorld() == null) {
+            return;
+        }
+        plugin.getCosmeticManager().playBurstEffect(deathLocation, plugin.getCosmeticManager().resolveSelectedDeathEffect(victim));
+        if (killer != null && killer.isOnline()) {
+            plugin.getCosmeticManager().playBurstEffect(deathLocation.clone().add(0.0D, 0.35D, 0.0D),
+                    plugin.getCosmeticManager().resolveSelectedKillEffect(killer));
+        }
     }
 
     private void transitionEliminatedToSpectatorImmediate(Player victim, RunningMatch match) {
@@ -669,7 +682,6 @@ public final class MatchManager {
             return;
         }
         SerializedCuboid gameplayArea = runningMatch.getArena().getGameplayArea();
-        SerializedCuboid lobbyArea = runningMatch.getArena().getLobbyArea();
         Location location = player.getLocation();
         if (runningMatch.isAlive(player.getUniqueId())) {
             if (gameplayArea == null) {
@@ -688,8 +700,7 @@ public final class MatchManager {
             return;
         }
         boolean inGameplay = gameplayArea != null && gameplayArea.contains(location);
-        boolean inLobby = lobbyArea != null && lobbyArea.contains(location);
-        if (inGameplay || inLobby) {
+        if (inGameplay) {
             return;
         }
         SerializedLocation spectatorSpawn = runningMatch.getArena().getSpectatorSpawn();
@@ -994,7 +1005,7 @@ public final class MatchManager {
                 continue;
             }
             ArenaState memberState = memberWaiting.getArena().getState();
-            if (memberState != ArenaState.WAITING && memberState != ArenaState.STARTING) {
+            if (memberState != ArenaState.WAITING) {
                 continue;
             }
             Player member = Bukkit.getPlayer(memberId);
@@ -1028,7 +1039,7 @@ public final class MatchManager {
             return false;
         }
         PillarsArena targetArena = leaderWaiting.getArena();
-        if (targetArena.getState() != ArenaState.WAITING && targetArena.getState() != ArenaState.STARTING) {
+        if (targetArena.getState() != ArenaState.WAITING) {
             return false;
         }
         if (targetArena.getLobbyArea() == null) {

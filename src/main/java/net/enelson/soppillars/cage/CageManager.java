@@ -10,6 +10,7 @@ import com.sk89q.worldedit.world.block.BaseBlock;
 import net.enelson.soppillars.SopPillarsPlugin;
 import net.enelson.soppillars.match.WaitingMatch;
 import net.enelson.soppillars.model.SerializedLocation;
+import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.block.Block;
 import org.bukkit.block.data.BlockData;
@@ -42,6 +43,18 @@ public final class CageManager {
             cage.restore();
         }
         activeCages.clear();
+    }
+
+    public boolean isActiveCageBlock(Location location) {
+        if (location == null) {
+            return false;
+        }
+        for (ActiveCage cage : new ArrayList<ActiveCage>(activeCages)) {
+            if (cage.contains(location)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public void spawnCages(WaitingMatch match) {

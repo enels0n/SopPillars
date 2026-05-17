@@ -24,10 +24,10 @@ public final class ArenaAdminMenuListener implements Listener {
             return;
         }
         String title = event.getView().getTitle();
-        if (ArenaAdminMenus.isCosmeticsTitle(title)) {
+        if (plugin.getCosmeticManager().isManagedInventory(title)) {
             event.setCancelled(true);
             if (event.getCurrentItem() != null) {
-                plugin.getCosmeticManager().handleMenuClick((Player) event.getWhoClicked(), event.getSlot());
+                plugin.getCosmeticManager().handleMenuClick((Player) event.getWhoClicked(), title, event.getSlot());
             }
             return;
         }
@@ -58,7 +58,7 @@ public final class ArenaAdminMenuListener implements Listener {
     @EventHandler
     public void onInventoryDrag(InventoryDragEvent event) {
         String title = event.getView().getTitle();
-        if (ArenaAdminMenus.isSettingsTitle(title) || ArenaAdminMenus.isCosmeticsTitle(title)
+        if (ArenaAdminMenus.isSettingsTitle(title) || plugin.getCosmeticManager().isManagedInventory(title)
                 || ArenaAdminMenus.isGlobalSettingsTitle(title)) {
             event.setCancelled(true);
         }

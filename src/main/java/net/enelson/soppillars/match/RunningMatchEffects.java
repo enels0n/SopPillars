@@ -2,6 +2,7 @@ package net.enelson.soppillars.match;
 
 import net.enelson.soppillars.SopPillarsPlugin;
 import net.enelson.soppillars.arena.ArenaState;
+import net.enelson.soppillars.cosmetic.VictoryEffectDefinition;
 import net.enelson.soppillars.arena.PillarsArena;
 import net.enelson.soppillars.model.ArenaSettings;
 import net.enelson.soppillars.model.SerializedCuboid;
@@ -22,11 +23,16 @@ import org.bukkit.entity.Firework;
 import org.bukkit.entity.LivingEntity;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.meta.FireworkMeta;
+import org.bukkit.util.Vector;
 
 import java.lang.reflect.Method;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 
 /**
  * Per-match fake border timings and optional rising lava.
@@ -55,6 +61,8 @@ public final class RunningMatchEffects {
     private int nextLavaY;
     private boolean lavaFinished;
     private final List<Location> lavaChanges = new ArrayList<Location>();
+    private final Set<String> playedOneShotVictorySounds = new HashSet<String>();
+    private final Map<String, Integer> repeatingVictorySoundTicks = new HashMap<String, Integer>();
     private WorldBorder visibleBorder;
 
     public RunningMatchEffects(SopPillarsPlugin plugin, MatchManager matchManager, RunningMatch match) {
@@ -211,8 +219,7 @@ public final class RunningMatchEffects {
         if (victoryEffectStarted || match.getLastWinningTeam() <= 0) {
             return;
         }
-        VictoryEffectType type = match.getArena().getSettings().getVictoryEffectType();
-        if (type == null || type == VictoryEffectType.NONE) {
+        if (!hasAnyWinnerVictoryEffect()) {
             return;
         }
         int intervalTicks = Math.max(2, match.getArena().getSettings().getVictoryEffectIntervalTicks());
@@ -387,32 +394,38 @@ public final class RunningMatchEffects {
             return;
         }
         ArenaSettings settings = match.getArena().getSettings();
-        int amount = Math.max(1, settings.getVictoryEffectAmountPerWave());
-        VictoryEffectType type = settings.getVictoryEffectType();
-        switch (type) {
-            case FIREWORKS:
-                for (int i = 0; i < amount; i++) {
-                    spawnFirework(world, randomEffectLocation(world, area, settings, 0.0D));
-                }
-                break;
-            case PIG_RAIN:
-                spawnEntityRain(world, area, settings, EntityType.PIG, amount);
-                break;
-            case COW_RAIN:
-                spawnEntityRain(world, area, settings, EntityType.COW, amount);
-                break;
-            case CHICKEN_RAIN:
-                spawnEntityRain(world, area, settings, EntityType.CHICKEN, amount);
-                break;
-            case ANVIL_RAIN:
-                spawnBlockRain(world, area, settings, Material.ANVIL, amount);
-                break;
-            case BLOCK_RAIN:
-                spawnBlockRain(world, area, settings, settings.getVictoryEffectBlockMaterial(), amount);
-                break;
-            case NONE:
-            default:
-                break;
+        for (java.util.UUID playerId : match.getPlayers()) {
+            if (!match.isAlive(playerId) || match.getTeam(playerId) != match.getLastWinningTeam()) {
+                continue;
+            }
+            Player player = Bukkit.getPlayer(playerId);
+            if (player == null || !player.isOnline()) {
+                continue;
+            }
+            VictoryEffectDefinition effect = plugin.getCosmeticManager().resolveSelectedVictoryEffect(player);
+            if (effect == null) {
+                continue;
+            }
+            playVictoryEffectSoundIfNeeded(world, area, settings, playerId, effect);
+            int amount = Math.max(1, settings.getVictoryEffectAmountPerWave());
+            switch (effect.getType()) {
+                case FIREWORKS:
+                    for (int i = 0; i < amount; i++) {
+                        spawnFirework(world, randomEffectLocation(world, area, settings, 0.0D));
+                    }
+                    break;
+                case ENTITY_RAIN:
+                    if (effect.getEntityType() != null) {
+                        spawnEntityRain(world, area, settings, effect.getEntityType(), amount);
+                    }
+                    break;
+                case BLOCK_RAIN:
+                    spawnBlockRain(world, area, settings, effect.getBlockMaterial(), amount);
+                    break;
+                case NONE:
+                default:
+                    break;
+            }
         }
     }
 
@@ -438,12 +451,13 @@ public final class RunningMatchEffects {
             Entity entity = world.spawnEntity(spawn, entityType);
             if (entity instanceof LivingEntity) {
                 LivingEntity living = (LivingEntity) entity;
-                living.setAI(false);
                 living.setInvulnerable(true);
                 living.setSilent(true);
                 living.setRemoveWhenFarAway(true);
+                living.setGravity(true);
             }
             entity.setFallDistance(0.0F);
+            entity.setVelocity(new Vector(0.0D, -0.35D, 0.0D));
             match.trackCelebrationEntity(entity.getUniqueId());
         }
     }
@@ -498,6 +512,37 @@ public final class RunningMatchEffects {
         }
     }
 
+    private void playVictoryEffectSoundIfNeeded(World world,
+                                                SerializedCuboid area,
+                                                ArenaSettings settings,
+                                                java.util.UUID playerId,
+                                                VictoryEffectDefinition effect) {
+        if (world == null || area == null || effect == null || effect.getSound() == null) {
+            return;
+        }
+        String soundKey = playerId.toString() + ":" + effect.getId();
+        int intervalTicks = Math.max(0, effect.getSoundIntervalTicks());
+        if (intervalTicks == 0) {
+            if (!playedOneShotVictorySounds.add(soundKey)) {
+                return;
+            }
+        } else {
+            Integer elapsedValue = repeatingVictorySoundTicks.get(soundKey);
+            if (elapsedValue == null) {
+                repeatingVictorySoundTicks.put(soundKey, Integer.valueOf(0));
+            } else {
+                int elapsed = elapsedValue.intValue() + settings.getVictoryEffectIntervalTicks();
+                if (elapsed < intervalTicks) {
+                    repeatingVictorySoundTicks.put(soundKey, Integer.valueOf(elapsed));
+                    return;
+                }
+                repeatingVictorySoundTicks.put(soundKey, Integer.valueOf(0));
+            }
+        }
+        Location soundLocation = randomEffectLocation(world, area, settings, settings.getVictoryEffectSpawnHeight() / 2.0D);
+        world.playSound(soundLocation, effect.getSound(), effect.getSoundVolume(), effect.getSoundPitch());
+    }
+
     private void removeCelebrationEntities() {
         for (java.util.UUID entityId : new ArrayList<java.util.UUID>(match.getCelebrationEntityIds())) {
             Entity entity = Bukkit.getEntity(entityId);
@@ -515,6 +560,23 @@ public final class RunningMatchEffects {
             Bukkit.getScheduler().cancelTask(taskId);
             match.setVictoryEffectTaskId(-1);
         }
+    }
+
+    private boolean hasAnyWinnerVictoryEffect() {
+        for (java.util.UUID playerId : match.getPlayers()) {
+            if (!match.isAlive(playerId) || match.getTeam(playerId) != match.getLastWinningTeam()) {
+                continue;
+            }
+            Player player = Bukkit.getPlayer(playerId);
+            if (player == null || !player.isOnline()) {
+                continue;
+            }
+            VictoryEffectDefinition effect = plugin.getCosmeticManager().resolveSelectedVictoryEffect(player);
+            if (effect != null && effect.getType() != VictoryEffectType.NONE) {
+                return true;
+            }
+        }
+        return false;
     }
 
 }

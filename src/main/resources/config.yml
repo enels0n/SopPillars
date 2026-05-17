@@ -109,6 +109,9 @@ messages:
   kit-items-cleared: "&aRemoved all items from kit &f%kit%&a."
   kit-remove-index-invalid: "&cInvalid kit item slot. Use /pillars kitremove <kit> <slot|all>."
   cage-selected: "&aSelected cage: &f%cage%&a."
+  victory-effect-selected: "&aSelected victory effect: &f%effect%&a."
+  kill-effect-selected: "&aSelected kill effect: &f%effect%&a."
+  death-effect-selected: "&aSelected death effect: &f%effect%&a."
   loot-list-saved: "&aSaved %scope% %mode% loot list."
   player-died: "&c%player% &7died."
   death-pvp: "&c%player% &7(Team %team%) was slain by &f%killer% &7— &f%arena%"
@@ -173,13 +176,11 @@ settings:
   default-loot-blacklist: []
   default-celebration-seconds: 10
   default-victory-effect:
-    type: fireworks
     shape: square
     radius: 16.0
     interval-ticks: 20
     spawn-height: 18.0
     amount-per-wave: 2
-    block-material: DIAMOND_BLOCK
   # Console commands after a win; run once per player on the winning team. Placeholders: %player%, {player}, %uuid%, %arena%, %team%
   default-victory-commands: []
   default-allowed-commands:

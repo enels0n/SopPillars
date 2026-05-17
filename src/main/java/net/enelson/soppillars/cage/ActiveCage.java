@@ -1,6 +1,7 @@
 package net.enelson.soppillars.cage;
 
 import org.bukkit.entity.Player;
+import org.bukkit.Location;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -28,5 +29,17 @@ public final class ActiveCage {
         for (CapturedBlockState capturedBlock : capturedBlocks) {
             capturedBlock.restore();
         }
+    }
+
+    public boolean contains(Location location) {
+        if (location == null) {
+            return false;
+        }
+        for (CapturedBlockState capturedBlock : capturedBlocks) {
+            if (capturedBlock.isAt(location)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

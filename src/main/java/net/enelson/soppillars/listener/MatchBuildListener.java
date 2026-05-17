@@ -32,6 +32,11 @@ public final class MatchBuildListener implements Listener {
         if (match == null) {
             return;
         }
+        if (plugin.getCageManager().isActiveCageBlock(event.getBlock().getLocation())
+                || plugin.getCageManager().isActiveCageBlock(event.getBlockAgainst().getLocation())) {
+            event.setCancelled(true);
+            return;
+        }
         if (!match.isAlive(player.getUniqueId())) {
             event.setCancelled(true);
             return;
@@ -72,6 +77,10 @@ public final class MatchBuildListener implements Listener {
         }
         RunningMatch match = plugin.getMatchManager().getRunningMatch(player.getUniqueId());
         if (match == null) {
+            return;
+        }
+        if (plugin.getCageManager().isActiveCageBlock(event.getBlock().getLocation())) {
+            event.setCancelled(true);
             return;
         }
         if (!match.isAlive(player.getUniqueId())) {
@@ -123,6 +132,10 @@ public final class MatchBuildListener implements Listener {
             return;
         }
         Block fluid = event.getBlockClicked().getRelative(event.getBlockFace());
+        if (plugin.getCageManager().isActiveCageBlock(fluid.getLocation())) {
+            event.setCancelled(true);
+            return;
+        }
         if (plugin.getMatchManager().isOutsideFakeBorder(player, fluid.getLocation())) {
             event.setCancelled(true);
             plugin.getMessageService().send(player, "match-build-place-denied");

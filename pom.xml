@@ -88,5 +88,11 @@
             <version>2.11.6</version>
             <scope>provided</scope>
         </dependency>
+        <dependency>
+            <groupId>net.enelson.sopli.lib</groupId>
+            <artifactId>soplib-core</artifactId>
+            <version>0.0.1-SNAPSHOT</version>
+            <scope>provided</scope>
+        </dependency>
     </dependencies>
 </project>

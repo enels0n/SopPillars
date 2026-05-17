@@ -6,10 +6,7 @@ public enum VictoryEffectType {
 
     NONE,
     FIREWORKS,
-    PIG_RAIN,
-    COW_RAIN,
-    CHICKEN_RAIN,
-    ANVIL_RAIN,
+    ENTITY_RAIN,
     BLOCK_RAIN;
 
     public static VictoryEffectType parse(String raw, VictoryEffectType fallback) {

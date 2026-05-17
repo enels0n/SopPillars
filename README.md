@@ -5,7 +5,7 @@ players queue into an arena, start in cages, receive random loot over time,
 fight in teams, and the last alive team wins.
 
 It is built for real server usage with admin-friendly tooling (wizard + menus),
-party integration, cosmetic cages, PlaceholderAPI support, and arena rollback flow.
+party integration, cosmetics, PlaceholderAPI support, and arena rollback flow.
 
 ## Key Features
 
@@ -18,7 +18,7 @@ party integration, cosmetic cages, PlaceholderAPI support, and arena rollback fl
   - inventory editors for arena loot lists,
   - inventory editors for global default lists (`/pillars settings global`).
 - Kit system with player selection and `No kit` option.
-- Cosmetic cage schematics (`.schem`) with permission-based access.
+- Cosmetics system for cages, victory effects, kill effects, and death effects.
 - WorldEdit cage paste with rotation from configured spawn yaw.
 - PlaceholderAPI placeholders for tab, scoreboards, and admin widgets.
 - Arena snapshots/backups for clean post-match restoration.
@@ -120,6 +120,9 @@ Admin commands:
 - `soppillars.stats` - default `true`
 - `soppillars.admin` - default `op`
 - `soppillars.cage.<id>` - optional per-cage permission
+- `soppillars.victory-effect.<id>` - optional per-victory-effect permission
+- `soppillars.kill-effect.<id>` - optional per-kill-effect permission
+- `soppillars.death-effect.<id>` - optional per-death-effect permission
 
 ## Kits
 
@@ -154,13 +157,112 @@ List editor workflow:
 - add/remove items,
 - close inventory to save list.
 
-## Cosmetics and Cages
+## Cosmetics
+
+Players choose cosmetics with:
+
+- `/pillars cosmetics`
+
+Current categories:
+
+- `Cages`
+- `Victory Effects`
+- `Kill Effects`
+- `Death Effects`
+
+### Cages
 
 - Put cage `.schem` files into `plugins/SopPillars/cages/`.
 - `default.schem` is auto-restored from plugin resources if deleted.
-- Players select cages via `/pillars cosmetics` (permission-aware).
-- At match start, plugin pastes selected schematic through WorldEdit.
+- At match start, plugin pastes the selected schematic through WorldEdit.
 - Rotation is based on `setspawn` yaw (nearest cardinal direction).
+
+Menu metadata for cages lives in:
+
+- `plugins/SopPillars/cosmetics/cages.yml`
+
+Example:
+
+```yml
+cages:
+  default:
+    display-name: "&bDefault Cage"
+    permission: ""
+    icon: LIGHT_BLUE_STAINED_GLASS
+    lore:
+      - "&7Classic glass cage."
+```
+
+### Victory Effects
+
+Configured in:
+
+- `plugins/SopPillars/cosmetics/victory-effects.yml`
+
+Supported types:
+
+- `fireworks`
+- `entity_rain`
+- `block_rain`
+
+Arena settings only control celebration geometry and timing:
+
+- `shape`
+- `radius`
+- `interval-ticks`
+- `spawn-height`
+- `amount-per-wave`
+
+The selected victory cosmetic controls what actually spawns, such as:
+
+- fireworks
+- pig/cow/chicken rain
+- anvil rain
+- block rain with custom block material
+
+### Kill and Death Effects
+
+Configured in:
+
+- `plugins/SopPillars/cosmetics/kill-effects.yml`
+- `plugins/SopPillars/cosmetics/death-effects.yml`
+
+Supported burst types:
+
+- `particle_burst`
+- `totem`
+- `lightning_fake`
+
+Example:
+
+```yml
+effects:
+  default_kill:
+    display-name: "&cDefault Kill Burst"
+    permission: ""
+    icon: BLAZE_POWDER
+    lore:
+      - "&7Simple flame burst on kill."
+    type: particle_burst
+    particle: FLAME
+    particle-count: 18
+    sound: ENTITY_BLAZE_SHOOT
+    sound-volume: 0.9
+    sound-pitch: 1.2
+```
+
+### PlaceholderAPI In Cosmetic Text
+
+If `PlaceholderAPI` is installed, cosmetic menu item names and lore support placeholders.
+
+This works in:
+
+- `cages.yml`
+- `victory-effects.yml`
+- `kill-effects.yml`
+- `death-effects.yml`
+
+Cosmetic menu items are created through `SopLib`.
 
 ## PlaceholderAPI
 

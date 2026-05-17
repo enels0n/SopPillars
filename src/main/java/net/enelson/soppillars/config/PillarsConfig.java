@@ -4,8 +4,6 @@ import net.enelson.soppillars.SopPillarsPlugin;
 import net.enelson.soppillars.model.ArenaSettings;
 import net.enelson.soppillars.model.SerializedLocation;
 import net.enelson.soppillars.model.VictoryEffectShape;
-import net.enelson.soppillars.model.VictoryEffectType;
-import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 
 import java.io.File;
@@ -66,13 +64,11 @@ public final class PillarsConfig {
         this.defaultArenaSettings.setLootBlacklist(new ArrayList<String>(plugin.getConfig().getStringList("settings.default-loot-blacklist")));
         this.defaultArenaSettings.setSmoothFallSeconds(plugin.getConfig().getInt("settings.default-smooth-fall-seconds", 10));
         this.defaultArenaSettings.setCelebrationSeconds(plugin.getConfig().getInt("settings.default-celebration-seconds", 10));
-        this.defaultArenaSettings.setVictoryEffectType(VictoryEffectType.parse(plugin.getConfig().getString("settings.default-victory-effect.type", "fireworks"), VictoryEffectType.FIREWORKS));
         this.defaultArenaSettings.setVictoryEffectShape(VictoryEffectShape.parse(plugin.getConfig().getString("settings.default-victory-effect.shape", "square"), VictoryEffectShape.SQUARE));
         this.defaultArenaSettings.setVictoryEffectRadius(plugin.getConfig().getDouble("settings.default-victory-effect.radius", 8.0D));
         this.defaultArenaSettings.setVictoryEffectIntervalTicks(plugin.getConfig().getInt("settings.default-victory-effect.interval-ticks", 20));
         this.defaultArenaSettings.setVictoryEffectSpawnHeight(plugin.getConfig().getDouble("settings.default-victory-effect.spawn-height", 14.0D));
         this.defaultArenaSettings.setVictoryEffectAmountPerWave(plugin.getConfig().getInt("settings.default-victory-effect.amount-per-wave", 2));
-        this.defaultArenaSettings.setVictoryEffectBlockMaterial(parseVictoryBlockMaterial(plugin.getConfig().getString("settings.default-victory-effect.block-material", "DIAMOND_BLOCK")));
         this.defaultArenaSettings.setVictoryCommands(new ArrayList<String>(plugin.getConfig().getStringList("settings.default-victory-commands")));
         ConfigurationSection spawnSection = plugin.getConfig().getConfigurationSection("settings.global-spawn");
         this.defaultPostGameSpawn = SerializedLocation.fromSection(spawnSection);
@@ -139,13 +135,11 @@ public final class PillarsConfig {
         settings.setLootBlacklist(new ArrayList<String>(defaultArenaSettings.getLootBlacklist()));
         settings.setSmoothFallSeconds(defaultArenaSettings.getSmoothFallSeconds());
         settings.setCelebrationSeconds(defaultArenaSettings.getCelebrationSeconds());
-        settings.setVictoryEffectType(defaultArenaSettings.getVictoryEffectType());
         settings.setVictoryEffectShape(defaultArenaSettings.getVictoryEffectShape());
         settings.setVictoryEffectRadius(defaultArenaSettings.getVictoryEffectRadius());
         settings.setVictoryEffectIntervalTicks(defaultArenaSettings.getVictoryEffectIntervalTicks());
         settings.setVictoryEffectSpawnHeight(defaultArenaSettings.getVictoryEffectSpawnHeight());
         settings.setVictoryEffectAmountPerWave(defaultArenaSettings.getVictoryEffectAmountPerWave());
-        settings.setVictoryEffectBlockMaterial(defaultArenaSettings.getVictoryEffectBlockMaterial());
         settings.setVictoryCommands(new ArrayList<String>(defaultArenaSettings.getVictoryCommands()));
         return settings;
     }
@@ -191,15 +185,4 @@ public final class PillarsConfig {
         }
     }
 
-    private Material parseVictoryBlockMaterial(String raw) {
-        if (raw == null || raw.trim().isEmpty()) {
-            return Material.DIAMOND_BLOCK;
-        }
-        try {
-            Material material = Material.valueOf(raw.trim().toUpperCase());
-            return material == null ? Material.DIAMOND_BLOCK : material;
-        } catch (IllegalArgumentException ignored) {
-            return Material.DIAMOND_BLOCK;
-        }
-    }
 }
