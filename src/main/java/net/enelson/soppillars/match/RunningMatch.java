@@ -21,8 +21,10 @@ public final class RunningMatch {
     private final Map<UUID, Boolean> aliveByPlayer = new LinkedHashMap<UUID, Boolean>();
     private int lastWinningTeam;
     private final Set<String> playerPlacedBlockKeys = new HashSet<String>();
+    private final Set<UUID> celebrationEntityIds = new HashSet<UUID>();
     private List<Material> blacklistLootPool;
     private final List<CapturedBlockState> hiddenLobbyBlocks = new ArrayList<CapturedBlockState>();
+    private int victoryEffectTaskId = -1;
 
     public RunningMatch(PillarsArena arena) {
         this.arena = arena;
@@ -140,6 +142,36 @@ public final class RunningMatch {
 
     public boolean isPlayerPlacedBlock(Location location) {
         return playerPlacedBlockKeys.contains(blockKey(location));
+    }
+
+    public void trackCelebrationEntity(UUID entityId) {
+        if (entityId != null) {
+            celebrationEntityIds.add(entityId);
+        }
+    }
+
+    public void untrackCelebrationEntity(UUID entityId) {
+        celebrationEntityIds.remove(entityId);
+    }
+
+    public boolean isTrackedCelebrationEntity(UUID entityId) {
+        return celebrationEntityIds.contains(entityId);
+    }
+
+    public Set<UUID> getCelebrationEntityIds() {
+        return new HashSet<UUID>(celebrationEntityIds);
+    }
+
+    public void clearCelebrationEntities() {
+        celebrationEntityIds.clear();
+    }
+
+    public int getVictoryEffectTaskId() {
+        return victoryEffectTaskId;
+    }
+
+    public void setVictoryEffectTaskId(int victoryEffectTaskId) {
+        this.victoryEffectTaskId = victoryEffectTaskId;
     }
 
     private static String blockKey(Location location) {

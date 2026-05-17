@@ -20,6 +20,7 @@ import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
 import org.bukkit.entity.Player;
+import org.bukkit.entity.Entity;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.player.PlayerRespawnEvent;
@@ -1326,6 +1327,10 @@ public final class MatchManager {
                 prepareWinnerForCelebration(winner);
             }
         }
+        RunningMatchEffects effects = runningEffects.get(normalize(arena.getName()));
+        if (effects != null) {
+            effects.beginVictoryEffectIfNeeded();
+        }
         if (winningTeam > 0) {
             broadcast(match, "match-won", replacements(
                     "arena", arena.getName(),
@@ -1588,6 +1593,30 @@ public final class MatchManager {
         }
         int winningTeam = match.getLastWinningTeam();
         return winningTeam > 0 && match.getTeam(player.getUniqueId()) == winningTeam;
+    }
+
+    public boolean isTrackedCelebrationEntity(Entity entity) {
+        if (entity == null) {
+            return false;
+        }
+        for (RunningMatchEffects effects : runningEffects.values()) {
+            if (effects.isTrackedCelebrationEntity(entity)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void handleCelebrationEntityLanded(Entity entity) {
+        if (entity == null) {
+            return;
+        }
+        for (RunningMatchEffects effects : runningEffects.values()) {
+            if (effects.isTrackedCelebrationEntity(entity)) {
+                effects.handleCelebrationEntityLanded(entity);
+                return;
+            }
+        }
     }
 
     private void teleportToLobby(Player player, PillarsArena arena) {

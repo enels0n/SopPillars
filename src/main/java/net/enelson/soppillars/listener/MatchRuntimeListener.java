@@ -6,6 +6,7 @@ import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
+import org.bukkit.event.entity.EntityChangeBlockEvent;
 import org.bukkit.event.entity.EntityDamageByEntityEvent;
 import org.bukkit.event.entity.EntityDamageEvent;
 import org.bukkit.event.entity.EntityPickupItemEvent;
@@ -99,6 +100,15 @@ public final class MatchRuntimeListener implements Listener {
             }
         }
         event.setCancelled(true);
+    }
+
+    @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)
+    public void onCelebrationBlockPlace(EntityChangeBlockEvent event) {
+        if (!plugin.getMatchManager().isTrackedCelebrationEntity(event.getEntity())) {
+            return;
+        }
+        event.setCancelled(true);
+        plugin.getMatchManager().handleCelebrationEntityLanded(event.getEntity());
     }
 
     @EventHandler(priority = EventPriority.HIGHEST, ignoreCancelled = true)

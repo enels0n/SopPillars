@@ -4,6 +4,8 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
+import org.bukkit.Material;
+
 public final class ArenaSettings {
 
     private int countdownSeconds;
@@ -34,6 +36,13 @@ public final class ArenaSettings {
     private List<String> lootWhitelist;
     private List<String> lootBlacklist;
     private int celebrationSeconds;
+    private VictoryEffectType victoryEffectType;
+    private VictoryEffectShape victoryEffectShape;
+    private double victoryEffectRadius;
+    private int victoryEffectIntervalTicks;
+    private double victoryEffectSpawnHeight;
+    private int victoryEffectAmountPerWave;
+    private Material victoryEffectBlockMaterial;
     private List<String> victoryCommands;
 
     public static ArenaSettings defaults(int countdownSeconds,
@@ -82,6 +91,13 @@ public final class ArenaSettings {
         settings.lootWhitelist = new ArrayList<String>();
         settings.lootBlacklist = new ArrayList<String>();
         settings.celebrationSeconds = 10;
+        settings.victoryEffectType = VictoryEffectType.FIREWORKS;
+        settings.victoryEffectShape = VictoryEffectShape.SQUARE;
+        settings.victoryEffectRadius = 8.0D;
+        settings.victoryEffectIntervalTicks = 20;
+        settings.victoryEffectSpawnHeight = 14.0D;
+        settings.victoryEffectAmountPerWave = 2;
+        settings.victoryEffectBlockMaterial = Material.DIAMOND_BLOCK;
         settings.victoryCommands = new ArrayList<String>();
         return settings;
     }
@@ -308,6 +324,62 @@ public final class ArenaSettings {
 
     public void setCelebrationSeconds(int celebrationSeconds) {
         this.celebrationSeconds = celebrationSeconds;
+    }
+
+    public VictoryEffectType getVictoryEffectType() {
+        return victoryEffectType;
+    }
+
+    public void setVictoryEffectType(VictoryEffectType victoryEffectType) {
+        this.victoryEffectType = victoryEffectType == null ? VictoryEffectType.FIREWORKS : victoryEffectType;
+    }
+
+    public VictoryEffectShape getVictoryEffectShape() {
+        return victoryEffectShape;
+    }
+
+    public void setVictoryEffectShape(VictoryEffectShape victoryEffectShape) {
+        this.victoryEffectShape = victoryEffectShape == null ? VictoryEffectShape.SQUARE : victoryEffectShape;
+    }
+
+    public double getVictoryEffectRadius() {
+        return victoryEffectRadius;
+    }
+
+    public void setVictoryEffectRadius(double victoryEffectRadius) {
+        this.victoryEffectRadius = victoryEffectRadius;
+    }
+
+    public int getVictoryEffectIntervalTicks() {
+        return victoryEffectIntervalTicks;
+    }
+
+    public void setVictoryEffectIntervalTicks(int victoryEffectIntervalTicks) {
+        this.victoryEffectIntervalTicks = victoryEffectIntervalTicks;
+    }
+
+    public double getVictoryEffectSpawnHeight() {
+        return victoryEffectSpawnHeight;
+    }
+
+    public void setVictoryEffectSpawnHeight(double victoryEffectSpawnHeight) {
+        this.victoryEffectSpawnHeight = victoryEffectSpawnHeight;
+    }
+
+    public int getVictoryEffectAmountPerWave() {
+        return victoryEffectAmountPerWave;
+    }
+
+    public void setVictoryEffectAmountPerWave(int victoryEffectAmountPerWave) {
+        this.victoryEffectAmountPerWave = victoryEffectAmountPerWave;
+    }
+
+    public Material getVictoryEffectBlockMaterial() {
+        return victoryEffectBlockMaterial;
+    }
+
+    public void setVictoryEffectBlockMaterial(Material victoryEffectBlockMaterial) {
+        this.victoryEffectBlockMaterial = victoryEffectBlockMaterial == null ? Material.DIAMOND_BLOCK : victoryEffectBlockMaterial;
     }
 
     public List<String> getVictoryCommands() {

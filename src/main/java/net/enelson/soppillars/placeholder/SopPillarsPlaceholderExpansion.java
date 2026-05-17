@@ -96,6 +96,8 @@ public final class SopPillarsPlaceholderExpansion extends PlaceholderExpansion {
                 return asWholeString(plugin.getMatchManager().getSecondsUntilGameEnd(playerId));
             case "min_players":
                 return asWholeString(resolveMinPlayers(waiting, running));
+            case "max_players":
+                return asWholeString(resolveMaxPlayers(waiting, running));
             case "min_filled_teams":
                 return asWholeString(resolveMinFilledTeams(waiting, running));
             case "stats_games":
@@ -147,6 +149,16 @@ public final class SopPillarsPlaceholderExpansion extends PlaceholderExpansion {
             return running.getArena().getSettings().getMinFilledTeams();
         }
         return plugin.getConfig().getInt("settings.default-min-filled-teams", 2);
+    }
+
+    private int resolveMaxPlayers(WaitingMatch waiting, RunningMatch running) {
+        if (waiting != null) {
+            return waiting.getArena().getMaxPlayers();
+        }
+        if (running != null) {
+            return running.getArena().getMaxPlayers();
+        }
+        return 0;
     }
 
     private String asWholeString(int value) {

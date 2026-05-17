@@ -172,6 +172,14 @@ settings:
   # Blacklist loot mode only: material names to exclude from rolls (e.g. BEDROCK, COMMAND_BLOCK). Empty = no exclusions except spawn/potion/book toggles below.
   default-loot-blacklist: []
   default-celebration-seconds: 10
+  default-victory-effect:
+    type: fireworks
+    shape: square
+    radius: 16.0
+    interval-ticks: 20
+    spawn-height: 18.0
+    amount-per-wave: 2
+    block-material: DIAMOND_BLOCK
   # Console commands after a win; run once per player on the winning team. Placeholders: %player%, {player}, %uuid%, %arena%, %team%
   default-victory-commands: []
   default-allowed-commands:
