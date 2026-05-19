@@ -16,6 +16,7 @@ import org.bukkit.GameMode;
 import org.bukkit.Location;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.Sound;
 import org.bukkit.World;
 import org.bukkit.block.Block;
 import org.bukkit.command.CommandSender;
@@ -31,6 +32,7 @@ import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scheduler.BukkitTask;
+import org.bukkit.potion.PotionEffect;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -699,7 +701,7 @@ public final class MatchManager {
             }
             return;
         }
-        boolean inGameplay = gameplayArea != null && gameplayArea.contains(location);
+        boolean inGameplay = isWithinGameplayHorizontalBounds(gameplayArea, location);
         if (inGameplay) {
             return;
         }
@@ -1085,6 +1087,10 @@ public final class MatchManager {
     }
 
     private List<UUID> resolvePartyJoinGroup(Player player) {
+        SopPartyApi api = SopPartyServices.get();
+        if (api != null && !api.isInParty(player)) {
+            return Collections.singletonList(player.getUniqueId());
+        }
         List<UUID> party = dedupeParty(plugin.getPartyBridge().getMemberUuids(player));
         if (party.isEmpty()) {
             return Collections.singletonList(player.getUniqueId());
@@ -1092,7 +1098,6 @@ public final class MatchManager {
         if (!party.contains(player.getUniqueId())) {
             party.add(player.getUniqueId());
         }
-        SopPartyApi api = SopPartyServices.get();
         if (api != null && !api.isInParty(player)) {
             return Collections.singletonList(player.getUniqueId());
         }
@@ -1210,6 +1215,7 @@ public final class MatchManager {
                     match.setCountdownRemaining(-1);
                     arena.setState(ArenaState.WAITING);
                     broadcast(match, "countdown-cancelled", replacement("arena", arena.getName()));
+                    playConfiguredSound(match.getPlayers(), "settings.timer-sounds.cancel-sound");
                 }
                 continue;
             }
@@ -1221,6 +1227,7 @@ public final class MatchManager {
                         "arena", arena.getName(),
                         "seconds", String.valueOf(match.getCountdownRemaining())
                 ));
+                playConfiguredSound(match.getPlayers(), "settings.timer-sounds.start-sound");
                 continue;
             }
 
@@ -1235,6 +1242,9 @@ public final class MatchManager {
                         "arena", arena.getName(),
                         "seconds", String.valueOf(remaining)
                 ));
+                if (remaining <= 5) {
+                    playConfiguredSound(match.getPlayers(), "settings.timer-sounds.tick-sound");
+                }
             }
             match.setCountdownRemaining(remaining - 1);
         }
@@ -1247,6 +1257,44 @@ public final class MatchManager {
     private boolean isReadyToStart(WaitingMatch match) {
         return match.size() >= match.getArena().getSettings().getMinPlayers()
                 && match.getFilledTeamCount() >= match.getArena().getSettings().getMinFilledTeams();
+    }
+
+    private boolean isWithinGameplayHorizontalBounds(SerializedCuboid gameplayArea, Location location) {
+        if (gameplayArea == null || location == null || location.getWorld() == null) {
+            return false;
+        }
+        if (!location.getWorld().getName().equalsIgnoreCase(gameplayArea.getMin().getWorld())) {
+            return false;
+        }
+        double x = location.getX();
+        double z = location.getZ();
+        return x >= gameplayArea.getMin().getX() && x <= gameplayArea.getMax().getX()
+                && z >= gameplayArea.getMin().getZ() && z <= gameplayArea.getMax().getZ();
+    }
+
+    private void playConfiguredSound(Collection<UUID> playerIds, String path) {
+        String soundName = plugin.getConfig().getString(path + ".name", "").trim();
+        if (soundName.isEmpty()) {
+            return;
+        }
+
+        final Sound sound;
+        try {
+            sound = Sound.valueOf(soundName.toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException ex) {
+            plugin.getLogger().warning("Invalid SopPillars timer sound '" + soundName + "' at " + path + ".name");
+            return;
+        }
+
+        float volume = (float) plugin.getConfig().getDouble(path + ".volume", 1.0D);
+        float pitch = (float) plugin.getConfig().getDouble(path + ".pitch", 1.0D);
+        for (UUID playerId : playerIds) {
+            Player player = Bukkit.getPlayer(playerId);
+            if (player == null || !player.isOnline()) {
+                continue;
+            }
+            player.playSound(player.getLocation(), sound, volume, pitch);
+        }
     }
 
     private void startMatch(WaitingMatch match) {
@@ -1295,6 +1343,7 @@ public final class MatchManager {
         arena.setState(ArenaState.RUNNING);
         match.setCountdownRemaining(-1);
         broadcast(runningMatch, "match-started", replacement("arena", arena.getName()));
+        playConfiguredSound(runningMatch.getPlayers(), "settings.timer-sounds.game-start-sound");
         plugin.getCageManager().spawnCages(match);
     }
 
@@ -1431,6 +1480,19 @@ public final class MatchManager {
         arena.setState(ArenaState.RESTORING);
         plugin.getArenaSnapshotManager().restoreArenaBaseline(arena);
         plugin.getArenaSnapshotManager().clearForeignEntities(arena);
+        plugin.getArenaSnapshotManager().clearResidualFluids(arena);
+        Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+            @Override
+            public void run() {
+                plugin.getArenaSnapshotManager().clearResidualFluids(arena);
+            }
+        }, 2L);
+        Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+            @Override
+            public void run() {
+                plugin.getArenaSnapshotManager().clearResidualFluids(arena);
+            }
+        }, 10L);
         plugin.getStatistics().recordMatchFinished(match, match.getLastWinningTeam());
 
         arena.setState(ArenaState.WAITING);
@@ -1527,6 +1589,19 @@ public final class MatchManager {
             return null;
         }
         return runningMatches.get(arenaName);
+    }
+
+    public RunningMatch getRunningMatchAt(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return null;
+        }
+        for (RunningMatch match : runningMatches.values()) {
+            SerializedCuboid gameplay = match.getArena().getGameplayArea();
+            if (gameplay != null && gameplay.contains(location)) {
+                return match;
+            }
+        }
+        return null;
     }
 
     public WaitingMatch getWaitingMatch(UUID playerId) {
@@ -1731,16 +1806,25 @@ public final class MatchManager {
     }
 
     private void refillVitals(Player player) {
+        clearPotionEffects(player);
         player.setHealth(player.getMaxHealth());
         player.setFoodLevel(20);
         player.setSaturation(20.0F);
         player.setExhaustion(0.0F);
     }
 
+    private void clearPotionEffects(Player player) {
+        for (PotionEffect effect : new ArrayList<PotionEffect>(player.getActivePotionEffects())) {
+            player.removePotionEffect(effect.getType());
+        }
+    }
+
     private void prepareWinnerForCelebration(Player player) {
         clearPlayerForWaitingLobby(player);
         player.setInvulnerable(true);
         player.setCanPickupItems(false);
+        player.setAllowFlight(true);
+        player.setFlying(true);
         player.setFireTicks(0);
         player.setFallDistance(0.0F);
         player.setGameMode(GameMode.SURVIVAL);

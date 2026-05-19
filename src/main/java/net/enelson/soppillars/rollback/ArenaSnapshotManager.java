@@ -197,6 +197,52 @@ public final class ArenaSnapshotManager {
         }
     }
 
+    public void clearResidualFluids(PillarsArena arena) {
+        SerializedCuboid cuboid = arena.getGameplayArea();
+        if (cuboid == null) {
+            return;
+        }
+        World world = Bukkit.getWorld(cuboid.getMin().getWorld());
+        if (world == null) {
+            return;
+        }
+
+        int[] b = cuboid.getInclusiveBlockBounds();
+        int x0 = b[0];
+        int y0 = Math.max(world.getMinHeight(), b[1] - 8);
+        int z0 = b[2];
+        int x1 = b[3];
+        int y1 = Math.min(world.getMaxHeight() - 1, b[4] + 2);
+        int z1 = b[5];
+
+        for (int x = x0; x <= x1; x++) {
+            for (int z = z0; z <= z1; z++) {
+                for (int y = y0; y <= y1; y++) {
+                    Block block = world.getBlockAt(x, y, z);
+                    if (!isResidualFluidBlock(block.getType())) {
+                        continue;
+                    }
+                    block.setType(Material.AIR, true);
+                }
+            }
+        }
+    }
+
+    private boolean isResidualFluidBlock(Material material) {
+        switch (material) {
+            case WATER:
+            case LAVA:
+            case BUBBLE_COLUMN:
+            case KELP:
+            case KELP_PLANT:
+            case SEAGRASS:
+            case TALL_SEAGRASS:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     public void deleteSnapshotIfExists(String arenaName) {
         File file = snapshotFile(arenaName);
         if (file.isFile()) {

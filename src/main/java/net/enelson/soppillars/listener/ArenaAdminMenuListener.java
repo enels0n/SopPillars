@@ -27,7 +27,7 @@ public final class ArenaAdminMenuListener implements Listener {
         if (plugin.getCosmeticManager().isManagedInventory(title)) {
             event.setCancelled(true);
             if (event.getCurrentItem() != null) {
-                plugin.getCosmeticManager().handleMenuClick((Player) event.getWhoClicked(), title, event.getSlot());
+                plugin.getCosmeticManager().handleMenuClick((Player) event.getWhoClicked(), title, event.getSlot(), event.getInventory().getSize());
             }
             return;
         }

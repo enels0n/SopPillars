@@ -10,6 +10,7 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockFromToEvent;
 import org.bukkit.event.block.BlockPlaceEvent;
 import org.bukkit.event.player.PlayerBucketEmptyEvent;
 
@@ -162,6 +163,48 @@ public final class MatchBuildListener implements Listener {
         SerializedCuboid gameplay = match.getArena().getGameplayArea();
         if (gameplay != null && gameplay.contains(fluid.getLocation())) {
             match.markPlayerPlacedBlock(fluid.getLocation());
+        }
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onFluidFlow(BlockFromToEvent event) {
+        Block source = event.getBlock();
+        if (source == null) {
+            return;
+        }
+        switch (source.getType()) {
+            case WATER:
+            case LAVA:
+                break;
+            default:
+                return;
+        }
+
+        RunningMatch match = plugin.getMatchManager().getRunningMatchAt(source.getLocation());
+        if (match == null) {
+            return;
+        }
+        SerializedCuboid gameplay = match.getArena().getGameplayArea();
+        if (gameplay == null) {
+            return;
+        }
+
+        Block to = event.getToBlock();
+        if (to == null || to.getWorld() == null) {
+            event.setCancelled(true);
+            return;
+        }
+        if (!to.getWorld().getName().equalsIgnoreCase(gameplay.getMin().getWorld())) {
+            event.setCancelled(true);
+            return;
+        }
+        if (to.getY() < gameplay.getMin().getY()) {
+            event.setCancelled(true);
+            return;
+        }
+        if (to.getX() < gameplay.getMin().getX() || to.getX() > gameplay.getMax().getX()
+                || to.getZ() < gameplay.getMin().getZ() || to.getZ() > gameplay.getMax().getZ()) {
+            event.setCancelled(true);
         }
     }
 }

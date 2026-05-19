@@ -39,12 +39,21 @@ public final class CosmeticManager {
     private static final String VICTORY_TITLE = ChatColor.DARK_PURPLE + "Victory Effects";
     private static final String KILL_TITLE = ChatColor.DARK_PURPLE + "Kill Effects";
     private static final String DEATH_TITLE = ChatColor.DARK_PURPLE + "Death Effects";
+    private static final String BACK_BUTTON_NAME = "&cBack";
+    private static final String PREVIOUS_BUTTON_NAME = "&ePrevious Page";
+    private static final String NEXT_BUTTON_NAME = "&eNext Page";
+    private static final int NAV_ROW_SIZE = 9;
+    private static final int MIN_PAGED_SIZE = 18;
 
     private final SopPillarsPlugin plugin;
     private final Map<UUID, String> selectedCageByPlayer = new LinkedHashMap<UUID, String>();
     private final Map<UUID, String> selectedVictoryEffectByPlayer = new LinkedHashMap<UUID, String>();
     private final Map<UUID, String> selectedKillEffectByPlayer = new LinkedHashMap<UUID, String>();
     private final Map<UUID, String> selectedDeathEffectByPlayer = new LinkedHashMap<UUID, String>();
+    private final Map<UUID, Integer> cagePageByPlayer = new LinkedHashMap<UUID, Integer>();
+    private final Map<UUID, Integer> victoryPageByPlayer = new LinkedHashMap<UUID, Integer>();
+    private final Map<UUID, Integer> killPageByPlayer = new LinkedHashMap<UUID, Integer>();
+    private final Map<UUID, Integer> deathPageByPlayer = new LinkedHashMap<UUID, Integer>();
     private final Map<String, CageDefinition> cagesById = new LinkedHashMap<String, CageDefinition>();
     private final Map<String, VictoryEffectDefinition> victoryEffectsById = new LinkedHashMap<String, VictoryEffectDefinition>();
     private final Map<String, BurstEffectDefinition> killEffectsById = new LinkedHashMap<String, BurstEffectDefinition>();
@@ -76,6 +85,10 @@ public final class CosmeticManager {
         selectedVictoryEffectByPlayer.clear();
         selectedKillEffectByPlayer.clear();
         selectedDeathEffectByPlayer.clear();
+        cagePageByPlayer.clear();
+        victoryPageByPlayer.clear();
+        killPageByPlayer.clear();
+        deathPageByPlayer.clear();
         cagesById.clear();
         victoryEffectsById.clear();
         killEffectsById.clear();
@@ -120,7 +133,7 @@ public final class CosmeticManager {
         player.openInventory(inventory);
     }
 
-    public void handleMenuClick(Player player, String title, int slot) {
+    public void handleMenuClick(Player player, String title, int slot, int inventorySize) {
         if (ROOT_TITLE.equals(title)) {
             if (slot == 1) {
                 openKillEffectsMenu(player);
@@ -134,19 +147,19 @@ public final class CosmeticManager {
             return;
         }
         if (CAGES_TITLE.equals(title)) {
-            handleCageMenuClick(player, slot);
+            handleCageMenuClick(player, slot, inventorySize);
             return;
         }
         if (VICTORY_TITLE.equals(title)) {
-            handleVictoryMenuClick(player, slot);
+            handleVictoryMenuClick(player, slot, inventorySize);
             return;
         }
         if (KILL_TITLE.equals(title)) {
-            handleKillMenuClick(player, slot);
+            handleKillMenuClick(player, slot, inventorySize);
             return;
         }
         if (DEATH_TITLE.equals(title)) {
-            handleDeathMenuClick(player, slot);
+            handleDeathMenuClick(player, slot, inventorySize);
         }
     }
 
@@ -230,106 +243,203 @@ public final class CosmeticManager {
     }
 
     private void openCagesMenu(Player player) {
+        openCagesMenu(player, cagePageByPlayer.containsKey(player.getUniqueId()) ? cagePageByPlayer.get(player.getUniqueId()).intValue() : 0);
+    }
+
+    private void openCagesMenu(Player player, int requestedPage) {
         List<CageDefinition> cages = getSelectableCages(player);
         if (cages.isEmpty()) {
-            Inventory inventory = Bukkit.createInventory(null, 9, CAGES_TITLE);
+            Inventory inventory = Bukkit.createInventory(null, MIN_PAGED_SIZE, CAGES_TITLE);
             inventory.setItem(4, buildMenuItem(player, Material.BARRIER, ChatColor.RED + "No cages available", Collections.<String>emptyList()));
+            fillNavigationRow(player, inventory, 0, 1);
             player.openInventory(inventory);
             return;
         }
-        int size = Math.max(9, ((cages.size() - 1) / 9 + 1) * 9);
+        int capacity = pageCapacity(cages.size());
+        int totalPages = totalPages(cages.size(), capacity);
+        int page = clampPage(requestedPage, totalPages);
+        cagePageByPlayer.put(player.getUniqueId(), Integer.valueOf(page));
+        int size = inventorySizeForEntries(cages.size());
         Inventory inventory = Bukkit.createInventory(null, size, CAGES_TITLE);
         String selected = resolveSelectedCageId(player);
-        for (int i = 0; i < cages.size(); i++) {
+        int startIndex = page * capacity;
+        int endIndex = Math.min(cages.size(), startIndex + capacity);
+        int slot = 0;
+        for (int i = startIndex; i < endIndex; i++) {
             CageDefinition definition = cages.get(i);
-            inventory.setItem(i, cageIcon(player, definition, definition.getId().equals(selected)));
+            inventory.setItem(slot++, cageIcon(player, definition, definition.getId().equals(selected)));
         }
+        fillNavigationRow(player, inventory, page, totalPages);
         player.openInventory(inventory);
     }
 
     private void openVictoryEffectsMenu(Player player) {
+        openVictoryEffectsMenu(player, victoryPageByPlayer.containsKey(player.getUniqueId()) ? victoryPageByPlayer.get(player.getUniqueId()).intValue() : 0);
+    }
+
+    private void openVictoryEffectsMenu(Player player, int requestedPage) {
         List<VictoryEffectDefinition> effects = getSelectableVictoryEffects(player);
         if (effects.isEmpty()) {
-            Inventory inventory = Bukkit.createInventory(null, 9, VICTORY_TITLE);
+            Inventory inventory = Bukkit.createInventory(null, MIN_PAGED_SIZE, VICTORY_TITLE);
             inventory.setItem(4, buildMenuItem(player, Material.BARRIER, ChatColor.RED + "No victory effects available", Collections.<String>emptyList()));
+            fillNavigationRow(player, inventory, 0, 1);
             player.openInventory(inventory);
             return;
         }
-        int size = Math.max(9, ((effects.size() - 1) / 9 + 1) * 9);
+        int capacity = pageCapacity(effects.size());
+        int totalPages = totalPages(effects.size(), capacity);
+        int page = clampPage(requestedPage, totalPages);
+        victoryPageByPlayer.put(player.getUniqueId(), Integer.valueOf(page));
+        int size = inventorySizeForEntries(effects.size());
         Inventory inventory = Bukkit.createInventory(null, size, VICTORY_TITLE);
         VictoryEffectDefinition selected = resolveSelectedVictoryEffect(player);
         String selectedId = selected == null ? "" : selected.getId();
-        for (int i = 0; i < effects.size(); i++) {
+        int startIndex = page * capacity;
+        int endIndex = Math.min(effects.size(), startIndex + capacity);
+        int slot = 0;
+        for (int i = startIndex; i < endIndex; i++) {
             VictoryEffectDefinition effect = effects.get(i);
-            inventory.setItem(i, victoryIcon(player, effect, effect.getId().equals(selectedId)));
+            inventory.setItem(slot++, victoryIcon(player, effect, effect.getId().equals(selectedId)));
         }
+        fillNavigationRow(player, inventory, page, totalPages);
         player.openInventory(inventory);
     }
 
     private void openKillEffectsMenu(Player player) {
-        openBurstEffectsMenu(player, KILL_TITLE, getSelectableKillEffects(player), resolveSelectedKillEffect(player));
+        openBurstEffectsMenu(player, KILL_TITLE, getSelectableKillEffects(player), resolveSelectedKillEffect(player),
+                killPageByPlayer.containsKey(player.getUniqueId()) ? killPageByPlayer.get(player.getUniqueId()).intValue() : 0);
     }
 
     private void openDeathEffectsMenu(Player player) {
-        openBurstEffectsMenu(player, DEATH_TITLE, getSelectableDeathEffects(player), resolveSelectedDeathEffect(player));
+        openBurstEffectsMenu(player, DEATH_TITLE, getSelectableDeathEffects(player), resolveSelectedDeathEffect(player),
+                deathPageByPlayer.containsKey(player.getUniqueId()) ? deathPageByPlayer.get(player.getUniqueId()).intValue() : 0);
     }
 
-    private void openBurstEffectsMenu(Player player, String title, List<BurstEffectDefinition> effects, BurstEffectDefinition selected) {
+    private void openBurstEffectsMenu(Player player, String title, List<BurstEffectDefinition> effects, BurstEffectDefinition selected, int requestedPage) {
         if (effects.isEmpty()) {
-            Inventory inventory = Bukkit.createInventory(null, 9, title);
+            Inventory inventory = Bukkit.createInventory(null, MIN_PAGED_SIZE, title);
             inventory.setItem(4, buildMenuItem(player, Material.BARRIER, "&cNo effects available", Collections.<String>emptyList()));
+            fillNavigationRow(player, inventory, 0, 1);
             player.openInventory(inventory);
             return;
         }
-        int size = Math.max(9, ((effects.size() - 1) / 9 + 1) * 9);
+        int capacity = pageCapacity(effects.size());
+        int totalPages = totalPages(effects.size(), capacity);
+        int page = clampPage(requestedPage, totalPages);
+        pageMap(title).put(player.getUniqueId(), Integer.valueOf(page));
+        int size = inventorySizeForEntries(effects.size());
         Inventory inventory = Bukkit.createInventory(null, size, title);
         String selectedId = selected == null ? "" : selected.getId();
-        for (int i = 0; i < effects.size(); i++) {
+        int startIndex = page * capacity;
+        int endIndex = Math.min(effects.size(), startIndex + capacity);
+        int slot = 0;
+        for (int i = startIndex; i < endIndex; i++) {
             BurstEffectDefinition effect = effects.get(i);
-            inventory.setItem(i, burstIcon(player, effect, effect.getId().equals(selectedId)));
+            inventory.setItem(slot++, burstIcon(player, effect, effect.getId().equals(selectedId)));
         }
+        fillNavigationRow(player, inventory, page, totalPages);
         player.openInventory(inventory);
     }
 
-    private void handleCageMenuClick(Player player, int slot) {
-        List<CageDefinition> cages = getSelectableCages(player);
-        if (slot < 0 || slot >= cages.size()) {
+    private void handleCageMenuClick(Player player, int slot, int inventorySize) {
+        if (isPreviousSlot(slot, inventorySize)) {
+            openCagesMenu(player, currentPage(cagePageByPlayer, player) - 1);
             return;
         }
-        CageDefinition definition = cages.get(slot);
+        if (isNextSlot(slot, inventorySize)) {
+            openCagesMenu(player, currentPage(cagePageByPlayer, player) + 1);
+            return;
+        }
+        if (isBackSlot(slot, inventorySize)) {
+            openMenu(player);
+            return;
+        }
+        List<CageDefinition> cages = getSelectableCages(player);
+        int capacity = pageCapacity(cages.size());
+        int index = currentPage(cagePageByPlayer, player) * capacity + slot;
+        if (slot < 0 || slot >= capacity || index >= cages.size()) {
+            return;
+        }
+        CageDefinition definition = cages.get(index);
         setSelectedCageId(player.getUniqueId(), definition.getId());
         plugin.getMessageService().send(player, "cage-selected", Collections.singletonMap("cage", definition.getDisplayName()));
         openCagesMenu(player);
     }
 
-    private void handleVictoryMenuClick(Player player, int slot) {
-        List<VictoryEffectDefinition> effects = getSelectableVictoryEffects(player);
-        if (slot < 0 || slot >= effects.size()) {
+    private void handleVictoryMenuClick(Player player, int slot, int inventorySize) {
+        if (isPreviousSlot(slot, inventorySize)) {
+            openVictoryEffectsMenu(player, currentPage(victoryPageByPlayer, player) - 1);
             return;
         }
-        VictoryEffectDefinition definition = effects.get(slot);
+        if (isNextSlot(slot, inventorySize)) {
+            openVictoryEffectsMenu(player, currentPage(victoryPageByPlayer, player) + 1);
+            return;
+        }
+        if (isBackSlot(slot, inventorySize)) {
+            openMenu(player);
+            return;
+        }
+        List<VictoryEffectDefinition> effects = getSelectableVictoryEffects(player);
+        int capacity = pageCapacity(effects.size());
+        int index = currentPage(victoryPageByPlayer, player) * capacity + slot;
+        if (slot < 0 || slot >= capacity || index >= effects.size()) {
+            return;
+        }
+        VictoryEffectDefinition definition = effects.get(index);
         setSelectedVictoryEffectId(player.getUniqueId(), definition.getId());
         plugin.getMessageService().send(player, "victory-effect-selected", Collections.singletonMap("effect", stripColor(definition.getDisplayName())));
         openVictoryEffectsMenu(player);
     }
 
-    private void handleKillMenuClick(Player player, int slot) {
-        List<BurstEffectDefinition> effects = getSelectableKillEffects(player);
-        if (slot < 0 || slot >= effects.size()) {
+    private void handleKillMenuClick(Player player, int slot, int inventorySize) {
+        if (isPreviousSlot(slot, inventorySize)) {
+            openBurstEffectsMenu(player, KILL_TITLE, getSelectableKillEffects(player), resolveSelectedKillEffect(player),
+                    currentPage(killPageByPlayer, player) - 1);
             return;
         }
-        BurstEffectDefinition definition = effects.get(slot);
+        if (isNextSlot(slot, inventorySize)) {
+            openBurstEffectsMenu(player, KILL_TITLE, getSelectableKillEffects(player), resolveSelectedKillEffect(player),
+                    currentPage(killPageByPlayer, player) + 1);
+            return;
+        }
+        if (isBackSlot(slot, inventorySize)) {
+            openMenu(player);
+            return;
+        }
+        List<BurstEffectDefinition> effects = getSelectableKillEffects(player);
+        int capacity = pageCapacity(effects.size());
+        int index = currentPage(killPageByPlayer, player) * capacity + slot;
+        if (slot < 0 || slot >= capacity || index >= effects.size()) {
+            return;
+        }
+        BurstEffectDefinition definition = effects.get(index);
         setSelectedKillEffectId(player.getUniqueId(), definition.getId());
         plugin.getMessageService().send(player, "kill-effect-selected", Collections.singletonMap("effect", stripColor(definition.getDisplayName())));
         openKillEffectsMenu(player);
     }
 
-    private void handleDeathMenuClick(Player player, int slot) {
-        List<BurstEffectDefinition> effects = getSelectableDeathEffects(player);
-        if (slot < 0 || slot >= effects.size()) {
+    private void handleDeathMenuClick(Player player, int slot, int inventorySize) {
+        if (isPreviousSlot(slot, inventorySize)) {
+            openBurstEffectsMenu(player, DEATH_TITLE, getSelectableDeathEffects(player), resolveSelectedDeathEffect(player),
+                    currentPage(deathPageByPlayer, player) - 1);
             return;
         }
-        BurstEffectDefinition definition = effects.get(slot);
+        if (isNextSlot(slot, inventorySize)) {
+            openBurstEffectsMenu(player, DEATH_TITLE, getSelectableDeathEffects(player), resolveSelectedDeathEffect(player),
+                    currentPage(deathPageByPlayer, player) + 1);
+            return;
+        }
+        if (isBackSlot(slot, inventorySize)) {
+            openMenu(player);
+            return;
+        }
+        List<BurstEffectDefinition> effects = getSelectableDeathEffects(player);
+        int capacity = pageCapacity(effects.size());
+        int index = currentPage(deathPageByPlayer, player) * capacity + slot;
+        if (slot < 0 || slot >= capacity || index >= effects.size()) {
+            return;
+        }
+        BurstEffectDefinition definition = effects.get(index);
         setSelectedDeathEffectId(player.getUniqueId(), definition.getId());
         plugin.getMessageService().send(player, "death-effect-selected", Collections.singletonMap("effect", stripColor(definition.getDisplayName())));
         openDeathEffectsMenu(player);
@@ -758,6 +868,18 @@ public final class CosmeticManager {
         return item;
     }
 
+    private ItemStack backButton(Player player) {
+        return buildMenuItem(player, Material.ARROW, BACK_BUTTON_NAME, Collections.singletonList("&7Return to cosmetics categories."));
+    }
+
+    private ItemStack previousButton(Player player) {
+        return buildMenuItem(player, Material.SPECTRAL_ARROW, PREVIOUS_BUTTON_NAME, Collections.singletonList("&7Open the previous page."));
+    }
+
+    private ItemStack nextButton(Player player) {
+        return buildMenuItem(player, Material.TIPPED_ARROW, NEXT_BUTTON_NAME, Collections.singletonList("&7Open the next page."));
+    }
+
     private ItemStack buildMenuItem(Player player, Material material, String displayName, List<String> lore) {
         String parsedName = decorateText(player, displayName);
         List<String> parsedLore = new ArrayList<String>();
@@ -866,6 +988,65 @@ public final class CosmeticManager {
 
     private String normalize(String input) {
         return input == null ? "" : input.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private boolean isBackSlot(int slot, int inventorySize) {
+        return inventorySize >= NAV_ROW_SIZE && slot == inventorySize - 5;
+    }
+
+    private boolean isPreviousSlot(int slot, int inventorySize) {
+        return inventorySize >= NAV_ROW_SIZE && slot == inventorySize - 9;
+    }
+
+    private boolean isNextSlot(int slot, int inventorySize) {
+        return inventorySize >= NAV_ROW_SIZE && slot == inventorySize - 1;
+    }
+
+    private void fillNavigationRow(Player player, Inventory inventory, int page, int totalPages) {
+        int size = inventory.getSize();
+        int navStart = Math.max(0, size - NAV_ROW_SIZE);
+        if (page > 0) {
+            inventory.setItem(navStart, previousButton(player));
+        }
+        inventory.setItem(navStart + 4, backButton(player));
+        if (page + 1 < totalPages) {
+            inventory.setItem(navStart + 8, nextButton(player));
+        }
+    }
+
+    private int inventorySizeForEntries(int entryCount) {
+        int contentRows = Math.max(1, (int) Math.ceil(entryCount / 9.0D));
+        return Math.min(54, Math.max(MIN_PAGED_SIZE, (contentRows + 1) * 9));
+    }
+
+    private int pageCapacity(int entryCount) {
+        return Math.max(9, inventorySizeForEntries(entryCount) - NAV_ROW_SIZE);
+    }
+
+    private int totalPages(int entryCount, int capacity) {
+        return Math.max(1, (int) Math.ceil(entryCount / (double) Math.max(1, capacity)));
+    }
+
+    private int clampPage(int requestedPage, int totalPages) {
+        return Math.max(0, Math.min(totalPages - 1, requestedPage));
+    }
+
+    private int currentPage(Map<UUID, Integer> pageMap, Player player) {
+        Integer value = pageMap.get(player.getUniqueId());
+        return value == null ? 0 : value.intValue();
+    }
+
+    private Map<UUID, Integer> pageMap(String title) {
+        if (KILL_TITLE.equals(title)) {
+            return killPageByPlayer;
+        }
+        if (DEATH_TITLE.equals(title)) {
+            return deathPageByPlayer;
+        }
+        if (VICTORY_TITLE.equals(title)) {
+            return victoryPageByPlayer;
+        }
+        return cagePageByPlayer;
     }
 
     private BurstEffectDefinition resolveSelectedBurstEffect(Player player,

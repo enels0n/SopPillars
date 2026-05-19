@@ -201,6 +201,23 @@ settings:
       lore:
         - "&7Right click to leave waiting queue."
         - "&8Waiting lobby only"
+  timer-sounds:
+    start-sound:
+      name: "BLOCK_NOTE_BLOCK_PLING"
+      volume: 1.2
+      pitch: 1.0
+    tick-sound:
+      name: "BLOCK_NOTE_BLOCK_HAT"
+      volume: 1.0
+      pitch: 1.4
+    game-start-sound:
+      name: "ENTITY_PLAYER_LEVELUP"
+      volume: 1.0
+      pitch: 1.0
+    cancel-sound:
+      name: "BLOCK_NOTE_BLOCK_BASS"
+      volume: 1.0
+      pitch: 0.8
   global-spawn:
     world: "World"
     x: 0.0

@@ -3,6 +3,7 @@ package net.enelson.soppillars.party;
 import net.enelson.sopparty.api.SopPartyApi;
 import org.bukkit.entity.Player;
 
+import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,6 +20,13 @@ public final class SopPartyPartyBridgeAdapter implements PartyBridge {
 
     @Override
     public List<UUID> getMemberUuids(Player player) {
-        return api.getMemberUuids(player);
+        if (!api.isInParty(player)) {
+            return Collections.singletonList(player.getUniqueId());
+        }
+        List<UUID> members = api.getMemberUuids(player);
+        if (members == null || members.isEmpty()) {
+            return Collections.singletonList(player.getUniqueId());
+        }
+        return members;
     }
 }
