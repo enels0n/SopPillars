@@ -2,6 +2,7 @@ package net.enelson.soppillars.rollback;
 
 import net.enelson.soppillars.SopPillarsPlugin;
 import net.enelson.soppillars.arena.PillarsArena;
+import net.enelson.soppillars.match.RunningMatch;
 import net.enelson.soppillars.model.SerializedCuboid;
 import org.bukkit.Bukkit;
 import org.bukkit.Material;
@@ -197,33 +198,18 @@ public final class ArenaSnapshotManager {
         }
     }
 
-    public void clearResidualFluids(PillarsArena arena) {
-        SerializedCuboid cuboid = arena.getGameplayArea();
-        if (cuboid == null) {
+    public void clearTrackedResidualFluids(RunningMatch match) {
+        if (match == null) {
             return;
         }
-        World world = Bukkit.getWorld(cuboid.getMin().getWorld());
-        if (world == null) {
-            return;
-        }
-
-        int[] b = cuboid.getInclusiveBlockBounds();
-        int x0 = b[0];
-        int y0 = Math.max(world.getMinHeight(), b[1] - 8);
-        int z0 = b[2];
-        int x1 = b[3];
-        int y1 = Math.min(world.getMaxHeight() - 1, b[4] + 2);
-        int z1 = b[5];
-
-        for (int x = x0; x <= x1; x++) {
-            for (int z = z0; z <= z1; z++) {
-                for (int y = y0; y <= y1; y++) {
-                    Block block = world.getBlockAt(x, y, z);
-                    if (!isResidualFluidBlock(block.getType())) {
-                        continue;
-                    }
-                    block.setType(Material.AIR, true);
-                }
+        for (RunningMatch.TrackedBlock tracked : match.getTrackedFluidBlocks()) {
+            World world = Bukkit.getWorld(tracked.getWorldName());
+            if (world == null) {
+                continue;
+            }
+            Block block = world.getBlockAt(tracked.getX(), tracked.getY(), tracked.getZ());
+            if (isResidualFluidBlock(block.getType())) {
+                block.setType(Material.AIR, true);
             }
         }
     }

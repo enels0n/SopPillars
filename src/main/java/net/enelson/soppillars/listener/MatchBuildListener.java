@@ -163,6 +163,7 @@ public final class MatchBuildListener implements Listener {
         SerializedCuboid gameplay = match.getArena().getGameplayArea();
         if (gameplay != null && gameplay.contains(fluid.getLocation())) {
             match.markPlayerPlacedBlock(fluid.getLocation());
+            match.markTrackedFluidBlock(fluid.getLocation());
         }
     }
 
@@ -182,6 +183,9 @@ public final class MatchBuildListener implements Listener {
 
         RunningMatch match = plugin.getMatchManager().getRunningMatchAt(source.getLocation());
         if (match == null) {
+            return;
+        }
+        if (!match.isTrackedFluidBlock(source.getLocation())) {
             return;
         }
         SerializedCuboid gameplay = match.getArena().getGameplayArea();
@@ -205,6 +209,8 @@ public final class MatchBuildListener implements Listener {
         if (to.getX() < gameplay.getMin().getX() || to.getX() > gameplay.getMax().getX()
                 || to.getZ() < gameplay.getMin().getZ() || to.getZ() > gameplay.getMax().getZ()) {
             event.setCancelled(true);
+            return;
         }
+        match.markTrackedFluidBlock(to.getLocation());
     }
 }

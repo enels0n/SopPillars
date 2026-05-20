@@ -21,6 +21,7 @@ public final class RunningMatch {
     private final Map<UUID, Boolean> aliveByPlayer = new LinkedHashMap<UUID, Boolean>();
     private int lastWinningTeam;
     private final Set<String> playerPlacedBlockKeys = new HashSet<String>();
+    private final Set<TrackedBlock> trackedFluidBlocks = new HashSet<TrackedBlock>();
     private final Set<UUID> celebrationEntityIds = new HashSet<UUID>();
     private List<Material> blacklistLootPool;
     private final List<CapturedBlockState> hiddenLobbyBlocks = new ArrayList<CapturedBlockState>();
@@ -144,6 +145,22 @@ public final class RunningMatch {
         return playerPlacedBlockKeys.contains(blockKey(location));
     }
 
+    public void markTrackedFluidBlock(Location location) {
+        TrackedBlock tracked = trackedBlock(location);
+        if (tracked != null) {
+            trackedFluidBlocks.add(tracked);
+        }
+    }
+
+    public boolean isTrackedFluidBlock(Location location) {
+        TrackedBlock tracked = trackedBlock(location);
+        return tracked != null && trackedFluidBlocks.contains(tracked);
+    }
+
+    public Set<TrackedBlock> getTrackedFluidBlocks() {
+        return new HashSet<TrackedBlock>(trackedFluidBlocks);
+    }
+
     public void trackCelebrationEntity(UUID entityId) {
         if (entityId != null) {
             celebrationEntityIds.add(entityId);
@@ -179,5 +196,71 @@ public final class RunningMatch {
             return "";
         }
         return location.getWorld().getName() + ":" + location.getBlockX() + ":" + location.getBlockY() + ":" + location.getBlockZ();
+    }
+
+    private static TrackedBlock trackedBlock(Location location) {
+        if (location == null || location.getWorld() == null) {
+            return null;
+        }
+        return new TrackedBlock(
+                location.getWorld().getName(),
+                location.getBlockX(),
+                location.getBlockY(),
+                location.getBlockZ()
+        );
+    }
+
+    public static final class TrackedBlock {
+        private final String worldName;
+        private final int x;
+        private final int y;
+        private final int z;
+
+        public TrackedBlock(String worldName, int x, int y, int z) {
+            this.worldName = worldName;
+            this.x = x;
+            this.y = y;
+            this.z = z;
+        }
+
+        public String getWorldName() {
+            return worldName;
+        }
+
+        public int getX() {
+            return x;
+        }
+
+        public int getY() {
+            return y;
+        }
+
+        public int getZ() {
+            return z;
+        }
+
+        @Override
+        public boolean equals(Object other) {
+            if (this == other) {
+                return true;
+            }
+            if (!(other instanceof TrackedBlock)) {
+                return false;
+            }
+            TrackedBlock that = (TrackedBlock) other;
+            return x == that.x
+                    && y == that.y
+                    && z == that.z
+                    && worldName.equals(that.worldName);
+        }
+
+        @Override
+        public int hashCode() {
+            int result = worldName.hashCode();
+            result = 31 * result + x;
+            result = 31 * result + y;
+            result = 31 * result + z;
+            return result;
+        }
     }
 }

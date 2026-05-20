@@ -1480,17 +1480,17 @@ public final class MatchManager {
         arena.setState(ArenaState.RESTORING);
         plugin.getArenaSnapshotManager().restoreArenaBaseline(arena);
         plugin.getArenaSnapshotManager().clearForeignEntities(arena);
-        plugin.getArenaSnapshotManager().clearResidualFluids(arena);
+        plugin.getArenaSnapshotManager().clearTrackedResidualFluids(match);
         Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
             @Override
             public void run() {
-                plugin.getArenaSnapshotManager().clearResidualFluids(arena);
+                plugin.getArenaSnapshotManager().clearTrackedResidualFluids(match);
             }
         }, 2L);
         Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
             @Override
             public void run() {
-                plugin.getArenaSnapshotManager().clearResidualFluids(arena);
+                plugin.getArenaSnapshotManager().clearTrackedResidualFluids(match);
             }
         }, 10L);
         plugin.getStatistics().recordMatchFinished(match, match.getLastWinningTeam());
