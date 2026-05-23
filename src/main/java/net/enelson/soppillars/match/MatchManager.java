@@ -55,6 +55,7 @@ public final class MatchManager {
     private static final String SOPPILLARS_RESERVATION_PREFIX = "soppillars:";
     private static final String RANDOM_RESERVATION_BLOCKED = "__reservation_blocked__";
     private static final long LOBBY_BOUNDS_TELEPORT_COOLDOWN_MS = 750L;
+    private static final long RECENT_ATTACK_KILL_CREDIT_MS = 15000L;
     private static final int TEAM_SELECTOR_SLOT_DEFAULT = 4;
     private static final int LEAVE_ARENA_SLOT_DEFAULT = 8;
     private static final String TEAM_SELECTOR_NAME_DEFAULT = ChatColor.GREEN + "Team Selector";
@@ -434,6 +435,24 @@ public final class MatchManager {
         }
     }
 
+    public void recordRecentAttacker(Player victim, Player attacker) {
+        if (victim == null || attacker == null || victim.getUniqueId().equals(attacker.getUniqueId())) {
+            return;
+        }
+        RunningMatch victimMatch = getRunningMatch(victim.getUniqueId());
+        if (victimMatch == null || !victimMatch.isAlive(victim.getUniqueId())) {
+            return;
+        }
+        RunningMatch attackerMatch = getRunningMatch(attacker.getUniqueId());
+        if (attackerMatch == null || attackerMatch != victimMatch || !attackerMatch.isAlive(attacker.getUniqueId())) {
+            return;
+        }
+        if (victimMatch.getTeam(victim.getUniqueId()) == victimMatch.getTeam(attacker.getUniqueId())) {
+            return;
+        }
+        victimMatch.recordRecentAttack(victim.getUniqueId(), attacker.getUniqueId());
+    }
+
     public void handleJoin(Player player) {
         if (player == null) {
             return;
@@ -464,6 +483,9 @@ public final class MatchManager {
         if (lethalEvent instanceof EntityDamageByEntityEvent) {
             killerHint = DamageResolver.resolvePlayerAttacker(((EntityDamageByEntityEvent) lethalEvent).getDamager());
         }
+        if (killerHint == null) {
+            killerHint = resolveRecentAttacker(match, victim.getUniqueId());
+        }
         DeathBroadcastResolver.DeathContext ctx = DeathBroadcastResolver.resolve(victim, killerHint, lethalEvent);
         finishEliminationCore(victim, match, ctx);
         MatchEliminationDrops.dropInventoryAndExperience(victim);
@@ -481,7 +503,11 @@ public final class MatchManager {
             return;
         }
         EntityDamageEvent last = victim.getLastDamageCause();
-        DeathBroadcastResolver.DeathContext ctx = DeathBroadcastResolver.resolve(victim, victim.getKiller(), last);
+        Player killerHint = victim.getKiller();
+        if (killerHint == null) {
+            killerHint = resolveRecentAttacker(match, victim.getUniqueId());
+        }
+        DeathBroadcastResolver.DeathContext ctx = DeathBroadcastResolver.resolve(victim, killerHint, last);
         finishEliminationCore(victim, match, ctx);
         respawnArenaByPlayer.put(victim.getUniqueId(), normalize(match.getArena().getName()));
     }
@@ -492,6 +518,7 @@ public final class MatchManager {
         if (ctx.getAttackingPlayer() != null) {
             plugin.getStatistics().recordKill(ctx.getAttackingPlayer().getUniqueId());
         }
+        match.clearRecentAttacker(victim.getUniqueId());
         match.setAlive(victim.getUniqueId(), false);
         playDeathAndKillCosmetics(victim, ctx.getAttackingPlayer(), deathLocation);
         broadcast(match, ctx.getMessageKey(), deathReplacements(victim, match, ctx));
@@ -2065,6 +2092,22 @@ public final class MatchManager {
 
     private String normalize(String input) {
         return input == null ? "" : input.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private Player resolveRecentAttacker(RunningMatch match, UUID victimId) {
+        if (match == null || victimId == null) {
+            return null;
+        }
+        UUID attackerId = match.getRecentAttacker(victimId, RECENT_ATTACK_KILL_CREDIT_MS);
+        if (attackerId == null) {
+            return null;
+        }
+        Player attacker = Bukkit.getPlayer(attackerId);
+        if (attacker == null || !attacker.isOnline() || !match.isAlive(attackerId)) {
+            match.clearRecentAttacker(victimId);
+            return null;
+        }
+        return attacker;
     }
 
     private String formatChat(String template, Player sender, String message, String state) {

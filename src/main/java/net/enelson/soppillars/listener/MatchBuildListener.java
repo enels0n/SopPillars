@@ -49,6 +49,8 @@ public final class MatchBuildListener implements Listener {
         }
         SerializedCuboid gameplay = match.getArena().getGameplayArea();
         if (gameplay == null || !gameplay.contains(event.getBlock().getLocation())) {
+            event.setCancelled(true);
+            plugin.getMessageService().send(player, "match-build-place-denied");
             return;
         }
         if (!match.getArena().getSettings().isAllowPlaceBlocks()) {
@@ -144,6 +146,8 @@ public final class MatchBuildListener implements Listener {
         }
         SerializedCuboid gameplay = match.getArena().getGameplayArea();
         if (gameplay == null || !gameplay.contains(fluid.getLocation())) {
+            event.setCancelled(true);
+            plugin.getMessageService().send(player, "match-build-place-denied");
             return;
         }
         if (!match.getArena().getSettings().isAllowPlaceBlocks()) {

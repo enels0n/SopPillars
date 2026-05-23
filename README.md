@@ -282,7 +282,46 @@ Available keys:
 - `loot_in` (alias: `next_loot_in`)
 - `time_to_end` (alias: `game_end_in`)
 - `min_players`
+- `max_players`
 - `min_filled_teams`
+- `arena_world`
+- `arena_teams`
+- `arena_players_per_team`
+- `arena_max_players`
+- `arena_min_players`
+- `arena_min_filled_teams`
+- `arena_countdown_seconds`
+- `arena_cage_seconds`
+- `arena_pre_border_delay_seconds`
+- `arena_border_shrink_seconds`
+- `arena_end_border_diameter`
+- `arena_lava_enabled`
+- `arena_lava_start_delay_seconds`
+- `arena_lava_rise_interval_seconds`
+- `arena_post_shrink_end_delay_seconds`
+- `arena_friendly_fire`
+- `arena_allow_place_blocks`
+- `arena_allow_break_original_blocks`
+- `arena_allow_break_player_blocks`
+- `arena_allow_smooth_fall`
+- `arena_smooth_fall_seconds`
+- `arena_loot_enabled`
+- `arena_loot_interval_seconds`
+- `arena_celebration_seconds`
+- `arena_victory_effect_shape`
+- `arena_victory_effect_radius`
+- `arena_victory_effect_interval_ticks`
+- `arena_victory_effect_spawn_height`
+- `arena_victory_effect_amount_per_wave`
+- `gameplay_min_x`
+- `gameplay_min_y`
+- `gameplay_min_z`
+- `gameplay_max_x`
+- `gameplay_max_y`
+- `gameplay_max_z`
+- `gameplay_size_x`
+- `gameplay_size_y`
+- `gameplay_size_z`
 - `stats_games`
 - `stats_wins`
 - `stats_kills`
@@ -297,6 +336,30 @@ Examples:
 - `%soppillars_stats_winstreak%`
 - `%soppillars_loot_in%`
 - `%soppillars_time_to_end%`
+- `%soppillars_arena_world%`
+- `%soppillars_arena_border_shrink_seconds%`
+- `%soppillars_gameplay_size_x%`
+
+Arena-specific lookup by name is also supported:
+
+- `%soppillars_arena111_min_players%`
+- `%soppillars_arena111_max_players%`
+- `%soppillars_arena111_world%`
+- `%soppillars_arena111_gameplay_size_x%`
+
+Format:
+
+- `%soppillars_<arena_name>_<property>%`
+
+Example:
+
+- arena name `arena111`
+- property `min_players`
+- final placeholder `%soppillars_arena111_min_players%`
+
+The long property form also works, for example:
+
+- `%soppillars_arena111_arena_min_players%`
 
 ## Configuration
 

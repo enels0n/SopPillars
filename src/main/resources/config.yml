@@ -173,7 +173,17 @@ settings:
   default-loot-blacklist-mode: false
   default-loot-whitelist: []
   # Blacklist loot mode only: material names to exclude from rolls (e.g. BEDROCK, COMMAND_BLOCK). Empty = no exclusions except spawn/potion/book toggles below.
-  default-loot-blacklist: []
+  default-loot-blacklist:
+    - TEST_BLOCK
+    - JIGSAW
+    - DEBUG_STICK
+    - BARRIER
+    - STRUCTURE_BLOCK
+    - LIGHT
+    - REPEATING_COMMAND_BLOCK
+    - CHAIN_COMMAND_BLOCK
+    - COMMAND_BLOCK_MINECART
+    - COMMAND_BLOCK
   default-celebration-seconds: 10
   default-victory-effect:
     shape: square

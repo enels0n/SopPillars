@@ -37,6 +37,19 @@ public final class MatchRuntimeListener implements Listener {
         }
     }
 
+    @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
+    public void onRecordRecentAttacker(EntityDamageByEntityEvent event) {
+        if (!(event.getEntity() instanceof Player)) {
+            return;
+        }
+        Player victim = (Player) event.getEntity();
+        Player attacker = DamageResolver.resolvePlayerAttacker(event.getDamager());
+        if (attacker == null) {
+            return;
+        }
+        plugin.getMatchManager().recordRecentAttacker(victim, attacker);
+    }
+
     /**
      * Cancels lethal damage and eliminates without {@link PlayerDeathEvent} (no death screen).
      * Runs after {@link #onFriendlyFire} (HIGHEST); skips cancelled hits and teammate damage.

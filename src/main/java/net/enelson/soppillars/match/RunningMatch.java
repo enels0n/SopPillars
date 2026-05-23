@@ -19,6 +19,7 @@ public final class RunningMatch {
     private final PillarsArena arena;
     private final Map<UUID, Integer> teamByPlayer = new LinkedHashMap<UUID, Integer>();
     private final Map<UUID, Boolean> aliveByPlayer = new LinkedHashMap<UUID, Boolean>();
+    private final Map<UUID, RecentAttack> recentAttackByVictim = new LinkedHashMap<UUID, RecentAttack>();
     private int lastWinningTeam;
     private final Set<String> playerPlacedBlockKeys = new HashSet<String>();
     private final Set<TrackedBlock> trackedFluidBlocks = new HashSet<TrackedBlock>();
@@ -66,6 +67,9 @@ public final class RunningMatch {
     public void setAlive(UUID playerId, boolean alive) {
         if (aliveByPlayer.containsKey(playerId)) {
             aliveByPlayer.put(playerId, Boolean.valueOf(alive));
+            if (!alive) {
+                recentAttackByVictim.remove(playerId);
+            }
         }
     }
 
@@ -159,6 +163,31 @@ public final class RunningMatch {
 
     public Set<TrackedBlock> getTrackedFluidBlocks() {
         return new HashSet<TrackedBlock>(trackedFluidBlocks);
+    }
+
+    public void recordRecentAttack(UUID victimId, UUID attackerId) {
+        if (victimId == null || attackerId == null || victimId.equals(attackerId)) {
+            return;
+        }
+        recentAttackByVictim.put(victimId, new RecentAttack(attackerId, System.currentTimeMillis()));
+    }
+
+    public UUID getRecentAttacker(UUID victimId, long maxAgeMillis) {
+        RecentAttack attack = recentAttackByVictim.get(victimId);
+        if (attack == null) {
+            return null;
+        }
+        if (maxAgeMillis > 0L && System.currentTimeMillis() - attack.timestampMillis > maxAgeMillis) {
+            recentAttackByVictim.remove(victimId);
+            return null;
+        }
+        return attack.attackerId;
+    }
+
+    public void clearRecentAttacker(UUID victimId) {
+        if (victimId != null) {
+            recentAttackByVictim.remove(victimId);
+        }
     }
 
     public void trackCelebrationEntity(UUID entityId) {
@@ -261,6 +290,16 @@ public final class RunningMatch {
             result = 31 * result + y;
             result = 31 * result + z;
             return result;
+        }
+    }
+
+    private static final class RecentAttack {
+        private final UUID attackerId;
+        private final long timestampMillis;
+
+        private RecentAttack(UUID attackerId, long timestampMillis) {
+            this.attackerId = attackerId;
+            this.timestampMillis = timestampMillis;
         }
     }
 }
