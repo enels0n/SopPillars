@@ -59,14 +59,14 @@ public final class LootGenerator {
     }
 
     private static ItemStack rollWhitelist(ArenaSettings settings, Random random) {
-        List<String> names = settings.getLootWhitelist();
-        if (names != null && !names.isEmpty()) {
-            String pick = names.get(random.nextInt(names.size()));
-            Material material = Material.matchMaterial(pick.trim().toUpperCase(Locale.ROOT).replace('-', '_').replace(' ', '_'));
-            if (material == null || !material.isItem()) {
-                material = Material.STICK;
+        List<ItemStack> customItems = new ArrayList<ItemStack>();
+        for (ItemStack itemStack : settings.getLootWhitelistItems()) {
+            if (itemStack != null && itemStack.getType().isItem()) {
+                customItems.add(itemStack.clone());
             }
-            return new ItemStack(material, 1);
+        }
+        if (!customItems.isEmpty()) {
+            return customItems.get(random.nextInt(customItems.size())).clone();
         }
 
         List<Material> dynamicPool = buildDynamicWhitelistPool(settings);

@@ -20,6 +20,13 @@ messages:
   help-16: "&e/pillars kitadd <kit>"
   help-17: "&e/pillars kitremove <kit> <slot|all>"
   help-18: "&e/pillars tp <arena>"
+  help-19: "&e/pillars leave"
+  help-20: "&e/pillars pos1"
+  help-21: "&e/pillars pos2"
+  help-22: "&e/pillars lobbypos1"
+  help-23: "&e/pillars lobbypos2"
+  help-24: "&e/pillars setspawn <team> <player>"
+  help-25: "&e/pillars setspectator"
   usage-create: "&eUsage: /pillars create <name> <mode> <teams> <players per team>"
   usage-edit: "&eUsage: /pillars edit <arena>"
   usage-cancel: "&eUsage: /pillars cancel <arena>"
@@ -85,9 +92,11 @@ messages:
   already-in-other-arena: "&cYou are already waiting in another arena."
   arena-full: "&cArena &f%arena% &cis full."
   joined-arena: "&aYou joined arena &f%arena%&a and were placed into team &f%team%&a."
+  lobby-player-joined: "&e%player% &7joined the lobby."
   no-random-arena: "&eNo suitable arena was found right now."
   not-in-arena: "&eYou are not waiting in any arena."
   left-arena: "&eYou left the waiting arena."
+  lobby-player-left: "&e%player% &7left the lobby."
   left-waiting-disconnect: "&7You disconnected while waiting in an arena."
   quit-match-alive-disconnect: "&7You disconnected during arena &f%arena% &7(as a player)."
   quit-match-spectator-disconnect: "&7You disconnected as a spectator of arena &f%arena%&7."
@@ -171,7 +180,6 @@ settings:
   default-loot-enabled: true
   default-loot-interval-seconds: 8
   default-loot-blacklist-mode: false
-  default-loot-whitelist: []
   # Blacklist loot mode only: material names to exclude from rolls (e.g. BEDROCK, COMMAND_BLOCK). Empty = no exclusions except spawn/potion/book toggles below.
   default-loot-blacklist:
     - TEST_BLOCK

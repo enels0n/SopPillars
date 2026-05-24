@@ -15,8 +15,8 @@ party integration, cosmetics, PlaceholderAPI support, and arena rollback flow.
 - Per-arena settings menu (`/pillars settings`) with immediate save.
 - Improved loot UX:
   - explicit `WHITELIST/BLACKLIST` mode switch,
-  - inventory editors for arena loot lists,
-  - inventory editors for global default lists (`/pillars settings global`).
+  - inventory editor for arena whitelist items,
+  - inventory editors for arena/global blacklist lists.
 - Kit system with player selection and `No kit` option.
 - Cosmetics system for cages, victory effects, kill effects, and death effects.
 - WorldEdit cage paste with rotation from configured spawn yaw.
@@ -148,14 +148,38 @@ Arena settings menu (`/pillars settings`) includes:
 Global settings menu (`/pillars settings global`) includes:
 
 - default loot mode,
-- global whitelist editor,
-- global blacklist editor.
+ - global blacklist editor.
 
 List editor workflow:
 
 - open editor inventory,
 - add/remove items,
 - close inventory to save list.
+
+### Whitelist Mode
+
+Whitelist mode is now item-based.
+
+Per-arena file format:
+
+```yml
+loot:
+  blacklist-mode: false
+  whitelist-items:
+    - ==: org.bukkit.inventory.ItemStack
+      v: 3955
+      type: PLAYER_HEAD
+      amount: 1
+```
+
+This allows whitelist entries such as:
+
+- normal items
+- custom heads
+- items with custom meta
+- other saved `ItemStack` data
+
+The arena whitelist editor now saves full `ItemStack` entries, not only material names.
 
 ## Cosmetics
 
@@ -370,7 +394,7 @@ Important options:
 - `settings.global-spawn` - fallback teleport location.
 - `settings.default-min-players` and `settings.default-min-filled-teams`.
 - `settings.default-loot-blacklist-mode`.
-- `settings.default-loot-whitelist` / `settings.default-loot-blacklist`.
+- `settings.default-loot-blacklist`.
 
 Arena files are stored in `plugins/SopPillars/arenas/`.
 

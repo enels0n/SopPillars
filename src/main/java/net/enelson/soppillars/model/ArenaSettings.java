@@ -1,5 +1,7 @@
 package net.enelson.soppillars.model;
 
+import org.bukkit.inventory.ItemStack;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -31,7 +33,7 @@ public final class ArenaSettings {
     private List<String> allowedCommands;
     private boolean lootEnabled;
     private int lootIntervalSeconds;
-    private List<String> lootWhitelist;
+    private List<ItemStack> lootWhitelistItems;
     private List<String> lootBlacklist;
     private int celebrationSeconds;
     private VictoryEffectShape victoryEffectShape;
@@ -84,7 +86,7 @@ public final class ArenaSettings {
         settings.allowedCommands = new ArrayList<String>(allowedCommands);
         settings.lootEnabled = true;
         settings.lootIntervalSeconds = 8;
-        settings.lootWhitelist = new ArrayList<String>();
+        settings.lootWhitelistItems = new ArrayList<ItemStack>();
         settings.lootBlacklist = new ArrayList<String>();
         settings.celebrationSeconds = 10;
         settings.victoryEffectShape = VictoryEffectShape.SQUARE;
@@ -296,12 +298,25 @@ public final class ArenaSettings {
         this.lootIntervalSeconds = lootIntervalSeconds;
     }
 
-    public List<String> getLootWhitelist() {
-        return lootWhitelist;
+    public List<ItemStack> getLootWhitelistItems() {
+        List<ItemStack> copy = new ArrayList<ItemStack>();
+        if (this.lootWhitelistItems == null) {
+            return Collections.unmodifiableList(copy);
+        }
+        for (ItemStack itemStack : this.lootWhitelistItems) {
+            copy.add(itemStack == null ? null : itemStack.clone());
+        }
+        return Collections.unmodifiableList(copy);
     }
 
-    public void setLootWhitelist(List<String> lootWhitelist) {
-        this.lootWhitelist = lootWhitelist == null ? new ArrayList<String>() : new ArrayList<String>(lootWhitelist);
+    public void setLootWhitelistItems(List<ItemStack> lootWhitelistItems) {
+        this.lootWhitelistItems = new ArrayList<ItemStack>();
+        if (lootWhitelistItems == null) {
+            return;
+        }
+        for (ItemStack itemStack : lootWhitelistItems) {
+            this.lootWhitelistItems.add(itemStack == null ? null : itemStack.clone());
+        }
     }
 
     public List<String> getLootBlacklist() {

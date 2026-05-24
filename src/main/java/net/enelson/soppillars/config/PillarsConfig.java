@@ -60,7 +60,6 @@ public final class PillarsConfig {
         this.defaultArenaSettings.setLootEnabled(plugin.getConfig().getBoolean("settings.default-loot-enabled", true));
         this.defaultArenaSettings.setLootIntervalSeconds(plugin.getConfig().getInt("settings.default-loot-interval-seconds", 8));
         this.defaultArenaSettings.setBlacklistMode(plugin.getConfig().getBoolean("settings.default-loot-blacklist-mode", false));
-        this.defaultArenaSettings.setLootWhitelist(new ArrayList<String>(plugin.getConfig().getStringList("settings.default-loot-whitelist")));
         this.defaultArenaSettings.setLootBlacklist(new ArrayList<String>(plugin.getConfig().getStringList("settings.default-loot-blacklist")));
         this.defaultArenaSettings.setSmoothFallSeconds(plugin.getConfig().getInt("settings.default-smooth-fall-seconds", 10));
         this.defaultArenaSettings.setCelebrationSeconds(plugin.getConfig().getInt("settings.default-celebration-seconds", 10));
@@ -131,7 +130,6 @@ public final class PillarsConfig {
         settings.setAllowSpawnEggs(defaultArenaSettings.isAllowSpawnEggs());
         settings.setLootEnabled(defaultArenaSettings.isLootEnabled());
         settings.setLootIntervalSeconds(defaultArenaSettings.getLootIntervalSeconds());
-        settings.setLootWhitelist(new ArrayList<String>(defaultArenaSettings.getLootWhitelist()));
         settings.setLootBlacklist(new ArrayList<String>(defaultArenaSettings.getLootBlacklist()));
         settings.setSmoothFallSeconds(defaultArenaSettings.getSmoothFallSeconds());
         settings.setCelebrationSeconds(defaultArenaSettings.getCelebrationSeconds());

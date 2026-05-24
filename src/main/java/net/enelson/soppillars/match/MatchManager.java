@@ -270,6 +270,7 @@ public final class MatchManager {
                     "arena", arena.getName(),
                     "team", String.valueOf(team)
             ));
+            broadcastWaitingLobby(match, "lobby-player-joined", waitingLobbyReplacements(member, arena, team));
         }
         setSopPartyReservation(player, normalizedArenaName);
         return true;
@@ -364,10 +365,12 @@ public final class MatchManager {
 
         WaitingMatch waitingMatch = waitingMatches.get(arenaName);
         if (waitingMatch != null) {
+            int team = waitingMatch.getTeam(player.getUniqueId());
             waitingMatch.removePlayer(player.getUniqueId());
             if (waitingMatch.isEmpty()) {
                 waitingMatches.remove(arenaName);
             }
+            broadcastWaitingLobby(waitingMatch, "lobby-player-left", waitingLobbyReplacements(player, waitingMatch.getArena(), team));
             cleanupLobbyState(player);
             restorePlayerState(player);
             refillVitals(player);
@@ -2112,6 +2115,26 @@ public final class MatchManager {
 
     private String formatChat(String template, Player sender, String message, String state) {
         return plugin.getMessageService().resolve(template, chatReplacements(sender, message, state));
+    }
+
+    private void broadcastWaitingLobby(WaitingMatch match, String messageKey, Map<String, String> replacements) {
+        if (match == null || match.getPlayers().isEmpty()) {
+            return;
+        }
+        for (UUID playerId : match.getPlayers()) {
+            Player online = Bukkit.getPlayer(playerId);
+            if (online != null && online.isOnline()) {
+                plugin.getMessageService().send(online, messageKey, replacements);
+            }
+        }
+    }
+
+    private Map<String, String> waitingLobbyReplacements(Player player, PillarsArena arena, int team) {
+        Map<String, String> values = new HashMap<String, String>();
+        values.put("player", player == null ? "" : player.getName());
+        values.put("arena", arena == null ? "" : arena.getName());
+        values.put("team", team <= 0 ? "" : String.valueOf(team));
+        return values;
     }
 
     private Map<String, String> chatReplacements(Player sender, String message, String state) {

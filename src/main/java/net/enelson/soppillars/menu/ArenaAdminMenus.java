@@ -177,9 +177,6 @@ public final class ArenaAdminMenus {
                 plugin.getPillarsConfig().reload();
                 break;
             case 1:
-                plugin.getLootListEditorManager().openGlobalWhitelist(player);
-                return;
-            case 2:
                 plugin.getLootListEditorManager().openGlobalBlacklist(player);
                 return;
             default:
@@ -193,9 +190,8 @@ public final class ArenaAdminMenus {
     private static void fillGlobalSettings(SopPillarsPlugin plugin, Inventory inventory) {
         boolean blacklistMode = plugin.getConfig().getBoolean("settings.default-loot-blacklist-mode", false);
         inventory.setItem(0, lootModeRow(blacklistMode));
-        inventory.setItem(1, editorRow(Material.LIME_SHULKER_BOX, "Edit global whitelist"));
-        inventory.setItem(2, editorRow(Material.BLACK_SHULKER_BOX, "Edit global blacklist"));
-        for (int slot = 3; slot <= 25; slot++) {
+        inventory.setItem(1, editorRow(Material.BLACK_SHULKER_BOX, "Edit global blacklist"));
+        for (int slot = 2; slot <= 25; slot++) {
             inventory.setItem(slot, filler());
         }
         ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
@@ -204,7 +200,7 @@ public final class ArenaAdminMenus {
             meta.setDisplayName(ChatColor.AQUA + "Global defaults");
             meta.setLore(Arrays.asList(
                     ChatColor.GRAY + "Used for new arenas and defaults.",
-                    ChatColor.DARK_GRAY + "Click mode to switch: WHITELIST/BLACKLIST"
+                    ChatColor.DARK_GRAY + "Only blacklist is global."
             ));
             book.setItemMeta(meta);
         }

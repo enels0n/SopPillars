@@ -4,7 +4,13 @@ import net.enelson.soppillars.SopPillarsPlugin;
 import net.enelson.soppillars.match.RunningMatch;
 import net.enelson.soppillars.model.ArenaSettings;
 import net.enelson.soppillars.model.SerializedCuboid;
+import org.bukkit.Location;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.Bisected;
+import org.bukkit.block.data.BlockData;
+import org.bukkit.block.data.Directional;
+import org.bukkit.block.data.type.Bed;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -68,7 +74,11 @@ public final class MatchBuildListener implements Listener {
         }
         SerializedCuboid gameplay = match.getArena().getGameplayArea();
         if (gameplay != null && gameplay.contains(event.getBlock().getLocation())) {
-            match.markPlayerPlacedBlock(event.getBlock().getLocation());
+            for (Location location : relatedPlacedBlockLocations(event.getBlock())) {
+                if (gameplay.contains(location)) {
+                    match.markPlayerPlacedBlock(location);
+                }
+            }
         }
     }
 
@@ -96,7 +106,13 @@ public final class MatchBuildListener implements Listener {
             return;
         }
         ArenaSettings settings = match.getArena().getSettings();
-        boolean playerPlaced = match.isPlayerPlacedBlock(event.getBlock().getLocation());
+        boolean playerPlaced = false;
+        for (Location location : relatedPlacedBlockLocations(event.getBlock())) {
+            if (match.isPlayerPlacedBlock(location)) {
+                playerPlaced = true;
+                break;
+            }
+        }
         if (playerPlaced) {
             if (!settings.isAllowBreakPlayerBlocks()) {
                 event.setCancelled(true);
@@ -117,8 +133,10 @@ public final class MatchBuildListener implements Listener {
         if (match == null) {
             return;
         }
-        if (match.isPlayerPlacedBlock(event.getBlock().getLocation())) {
-            match.unmarkPlayerPlacedBlock(event.getBlock().getLocation());
+        for (Location location : relatedPlacedBlockLocations(event.getBlock())) {
+            if (match.isPlayerPlacedBlock(location)) {
+                match.unmarkPlayerPlacedBlock(location);
+            }
         }
     }
 
@@ -216,5 +234,34 @@ public final class MatchBuildListener implements Listener {
             return;
         }
         match.markTrackedFluidBlock(to.getLocation());
+    }
+
+    private static java.util.List<Location> relatedPlacedBlockLocations(Block block) {
+        java.util.ArrayList<Location> locations = new java.util.ArrayList<Location>(2);
+        if (block == null || block.getWorld() == null) {
+            return locations;
+        }
+        locations.add(block.getLocation());
+
+        BlockData data = block.getBlockData();
+        if (data instanceof Bed && data instanceof Directional) {
+            Bed bed = (Bed) data;
+            BlockFace facing = ((Directional) data).getFacing();
+            Block counterpart = bed.getPart() == Bed.Part.HEAD
+                    ? block.getRelative(facing.getOppositeFace())
+                    : block.getRelative(facing);
+            locations.add(counterpart.getLocation());
+            return locations;
+        }
+
+        if (data instanceof Bisected) {
+            Bisected bisected = (Bisected) data;
+            Block counterpart = bisected.getHalf() == Bisected.Half.TOP
+                    ? block.getRelative(BlockFace.DOWN)
+                    : block.getRelative(BlockFace.UP);
+            locations.add(counterpart.getLocation());
+        }
+
+        return locations;
     }
 }

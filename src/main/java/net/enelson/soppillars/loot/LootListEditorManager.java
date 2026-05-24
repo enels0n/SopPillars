@@ -29,16 +29,11 @@ public final class LootListEditorManager {
     }
 
     public void openArenaWhitelist(Player player, PillarsArena arena) {
-        open(player, new Session(Kind.WHITELIST, Scope.ARENA, arena.getName()), arena.getSettings().getLootWhitelist());
+        openWhitelist(player, new Session(Kind.WHITELIST, Scope.ARENA, arena.getName()), arena.getSettings().getLootWhitelistItems());
     }
 
     public void openArenaBlacklist(Player player, PillarsArena arena) {
         open(player, new Session(Kind.BLACKLIST, Scope.ARENA, arena.getName()), arena.getSettings().getLootBlacklist());
-    }
-
-    public void openGlobalWhitelist(Player player) {
-        open(player, new Session(Kind.WHITELIST, Scope.GLOBAL, ""),
-                plugin.getConfig().getStringList("settings.default-loot-whitelist"));
     }
 
     public void openGlobalBlacklist(Player player) {
@@ -62,7 +57,7 @@ public final class LootListEditorManager {
                 return;
             }
             if (session.kind == Kind.WHITELIST) {
-                arena.getSettings().setLootWhitelist(materials);
+                arena.getSettings().setLootWhitelistItems(collectItems(inventory));
             } else {
                 arena.getSettings().setLootBlacklist(materials);
             }
@@ -73,17 +68,15 @@ public final class LootListEditorManager {
             ));
             return;
         }
-        if (session.kind == Kind.WHITELIST) {
-            plugin.getConfig().set("settings.default-loot-whitelist", materials);
-        } else {
+        if (session.kind == Kind.BLACKLIST) {
             plugin.getConfig().set("settings.default-loot-blacklist", materials);
+            plugin.saveConfig();
+            plugin.getPillarsConfig().reload();
+            plugin.getMessageService().send(player, "loot-list-saved", mapOf(
+                    "scope", "global",
+                    "mode", "blacklist"
+            ));
         }
-        plugin.saveConfig();
-        plugin.getPillarsConfig().reload();
-        plugin.getMessageService().send(player, "loot-list-saved", mapOf(
-                "scope", "global",
-                "mode", session.kind == Kind.WHITELIST ? "whitelist" : "blacklist"
-        ));
     }
 
     private void open(Player player, Session session, List<String> materialNames) {
@@ -103,6 +96,22 @@ public final class LootListEditorManager {
         player.openInventory(inventory);
     }
 
+    private void openWhitelist(Player player, Session session, List<ItemStack> items) {
+        sessions.put(player.getUniqueId(), session);
+        Inventory inventory = plugin.getServer().createInventory(null, 54, buildTitle(session));
+        int slot = 0;
+        for (ItemStack item : items) {
+            if (slot >= inventory.getSize()) {
+                break;
+            }
+            if (item == null || item.getType() == Material.AIR) {
+                continue;
+            }
+            inventory.setItem(slot++, item.clone());
+        }
+        player.openInventory(inventory);
+    }
+
     private List<String> collectMaterialNames(Inventory inventory) {
         Set<String> unique = new LinkedHashSet<String>();
         for (ItemStack item : inventory.getContents()) {
@@ -115,6 +124,17 @@ public final class LootListEditorManager {
             unique.add(item.getType().name());
         }
         return new ArrayList<String>(unique);
+    }
+
+    private List<ItemStack> collectItems(Inventory inventory) {
+        List<ItemStack> items = new ArrayList<ItemStack>();
+        for (ItemStack item : inventory.getContents()) {
+            if (item == null || item.getType() == Material.AIR) {
+                continue;
+            }
+            items.add(item.clone());
+        }
+        return items;
     }
 
     private String buildTitle(Session session) {

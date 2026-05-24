@@ -8,6 +8,7 @@ import net.enelson.soppillars.model.VictoryEffectShape;
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.configuration.file.YamlConfiguration;
+import org.bukkit.inventory.ItemStack;
 
 import java.io.File;
 import java.io.IOException;
@@ -359,7 +360,8 @@ public final class ArenaManager {
         section.set("loot.allow-spawn-eggs", settings.isAllowSpawnEggs());
         section.set("loot.enabled", settings.isLootEnabled());
         section.set("loot.interval-seconds", settings.getLootIntervalSeconds());
-        section.set("loot.whitelist", new ArrayList<String>(settings.getLootWhitelist()));
+        section.set("loot.whitelist", null);
+        section.set("loot.whitelist-items", new ArrayList<ItemStack>(settings.getLootWhitelistItems()));
         section.set("loot.blacklist", new ArrayList<String>(settings.getLootBlacklist()));
         section.set("allowed-commands", new ArrayList<String>(settings.getAllowedCommands()));
         section.set("celebration-seconds", settings.getCelebrationSeconds());
@@ -400,7 +402,7 @@ public final class ArenaManager {
         defaults.setAllowSpawnEggs(section.getBoolean("loot.allow-spawn-eggs", defaults.isAllowSpawnEggs()));
         defaults.setLootEnabled(section.getBoolean("loot.enabled", defaults.isLootEnabled()));
         defaults.setLootIntervalSeconds(section.getInt("loot.interval-seconds", defaults.getLootIntervalSeconds()));
-        defaults.setLootWhitelist(section.getStringList("loot.whitelist"));
+        defaults.setLootWhitelistItems(loadItemStackList(section, "loot.whitelist-items"));
         defaults.setLootBlacklist(section.getStringList("loot.blacklist"));
         defaults.setAllowedCommands(section.getStringList("allowed-commands"));
         defaults.setCelebrationSeconds(section.getInt("celebration-seconds", defaults.getCelebrationSeconds()));
@@ -417,5 +419,19 @@ public final class ArenaManager {
 
     private String normalize(String input) {
         return input == null ? "" : input.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private List<ItemStack> loadItemStackList(ConfigurationSection section, String path) {
+        List<ItemStack> items = new ArrayList<ItemStack>();
+        List<?> raw = section.getList(path);
+        if (raw == null) {
+            return items;
+        }
+        for (Object value : raw) {
+            if (value instanceof ItemStack) {
+                items.add(((ItemStack) value).clone());
+            }
+        }
+        return items;
     }
 }
