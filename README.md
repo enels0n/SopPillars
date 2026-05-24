@@ -38,12 +38,12 @@ party integration, cosmetics, PlaceholderAPI support, and arena rollback flow.
 From repository root:
 
 ```bash
-mvn -f "SopPillars/pom.xml" -DskipTests package
+mvn -DskipTests package
 ```
 
 Output JAR:
 
-- `SopPillars/target/SopPillars.jar`
+- `target/SopPillars.jar`
 
 ## Installation
 
@@ -302,6 +302,7 @@ Available keys:
 - `alive`
 - `countdown`
 - `alive_players`
+- `filled_teams`
 - `players_total`
 - `loot_in` (alias: `next_loot_in`)
 - `time_to_end` (alias: `game_end_in`)
@@ -358,6 +359,7 @@ Examples:
 - `%soppillars_min_players%`
 - `%soppillars_stats_wins%`
 - `%soppillars_stats_winstreak%`
+- `%soppillars_filled_teams%`
 - `%soppillars_loot_in%`
 - `%soppillars_time_to_end%`
 - `%soppillars_arena_world%`
@@ -384,6 +386,7 @@ Example:
 The long property form also works, for example:
 
 - `%soppillars_arena111_arena_min_players%`
+- `%soppillars_arena111_filled_teams%`
 
 ## Configuration
 
@@ -412,5 +415,5 @@ Arena files are stored in `plugins/SopPillars/arenas/`.
 
 ## Development Notes
 
-- Current module version: `0.0.1-SNAPSHOT`.
+- Current module version: `1.0.0`.
 - `MVP.md` and `SPEC.md` are intentionally kept local and ignored in Git.
