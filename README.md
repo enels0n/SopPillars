@@ -412,8 +412,3 @@ Arena files are stored in `plugins/SopPillars/arenas/`.
   - ensure PlaceholderAPI is installed and expansion is registered at startup.
 - Build outputs classes but no jar:
   - use Maven `package`, not only `compile`.
-
-## Development Notes
-
-- Current module version: `1.0.0`.
-- `MVP.md` and `SPEC.md` are intentionally kept local and ignored in Git.
