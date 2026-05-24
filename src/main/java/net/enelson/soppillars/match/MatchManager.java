@@ -2177,7 +2177,7 @@ public final class MatchManager {
     }
 
     private String formatChat(String template, Player sender, String message, String state) {
-        return plugin.getMessageService().resolve(template, chatReplacements(sender, message, state));
+        return plugin.getMessageService().resolve(sender, template, chatReplacements(sender, message, state));
     }
 
     private void broadcastWaitingLobby(WaitingMatch match, String messageKey, Map<String, String> replacements) {
