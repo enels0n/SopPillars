@@ -1638,6 +1638,32 @@ public final class MatchManager {
         return getPlayerWaitingMatch(playerId);
     }
 
+    public WaitingMatch getWaitingMatch(PillarsArena arena) {
+        if (arena == null) {
+            return null;
+        }
+        return waitingMatches.get(normalize(arena.getName()));
+    }
+
+    public RunningMatch getRunningMatch(PillarsArena arena) {
+        if (arena == null) {
+            return null;
+        }
+        return runningMatches.get(normalize(arena.getName()));
+    }
+
+    public int getFilledTeamCount(PillarsArena arena) {
+        WaitingMatch waiting = getWaitingMatch(arena);
+        if (waiting != null) {
+            return waiting.getFilledTeamCount();
+        }
+        RunningMatch running = getRunningMatch(arena);
+        if (running != null) {
+            return running.getAliveTeamCount();
+        }
+        return 0;
+    }
+
     public String getTrackedArenaName(UUID playerId) {
         String arenaName = arenaByPlayer.get(playerId);
         if (arenaName == null) {

@@ -124,6 +124,8 @@ public final class SopPillarsPlaceholderExpansion extends PlaceholderExpansion {
                 return asWholeString(resolveMaxPlayers(waiting, running));
             case "min_filled_teams":
                 return asWholeString(resolveMinFilledTeams(waiting, running));
+            case "filled_teams":
+                return asWholeString(resolveFilledTeams(waiting, running));
             default:
                 if (key.startsWith("arena_") || key.startsWith("gameplay_")) {
                     return resolveArenaProperty(arena, key);
@@ -196,6 +198,9 @@ public final class SopPillarsPlaceholderExpansion extends PlaceholderExpansion {
             case "min_filled_teams":
             case "arena_min_filled_teams":
                 return asWholeString(settings == null ? 0 : settings.getMinFilledTeams());
+            case "filled_teams":
+            case "arena_filled_teams":
+                return asWholeString(plugin.getMatchManager().getFilledTeamCount(arena));
             case "countdown_seconds":
             case "arena_countdown_seconds":
                 return asWholeString(settings == null ? 0 : settings.getCountdownSeconds());
@@ -342,6 +347,16 @@ public final class SopPillarsPlaceholderExpansion extends PlaceholderExpansion {
         }
         if (running != null) {
             return running.getArena().getMaxPlayers();
+        }
+        return 0;
+    }
+
+    private int resolveFilledTeams(WaitingMatch waiting, RunningMatch running) {
+        if (waiting != null) {
+            return waiting.getFilledTeamCount();
+        }
+        if (running != null) {
+            return running.getAliveTeamCount();
         }
         return 0;
     }
