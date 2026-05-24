@@ -1587,6 +1587,43 @@ public final class MatchManager {
         return true;
     }
 
+    public boolean canEnterEditMode(PillarsArena arena) {
+        if (arena == null) {
+            return false;
+        }
+        ArenaState state = arena.getState();
+        return state != ArenaState.STARTING
+                && state != ArenaState.RUNNING
+                && state != ArenaState.ENDING
+                && state != ArenaState.RESTORING;
+    }
+
+    public void prepareArenaForEditing(PillarsArena arena) {
+        if (arena == null) {
+            return;
+        }
+        String arenaName = normalize(arena.getName());
+        WaitingMatch waiting = waitingMatches.get(arenaName);
+        if (waiting == null || waiting.isEmpty()) {
+            return;
+        }
+
+        for (UUID playerId : new ArrayList<UUID>(waiting.getPlayers())) {
+            Player player = Bukkit.getPlayer(playerId);
+            if (player != null && player.isOnline()) {
+                leaveArena(player, false);
+                continue;
+            }
+            waiting.removePlayer(playerId);
+            arenaByPlayer.remove(playerId);
+            respawnArenaByPlayer.remove(playerId);
+        }
+
+        if (waiting.isEmpty()) {
+            waitingMatches.remove(arenaName);
+        }
+    }
+
     public void unregisterArena(PillarsArena arena) {
         if (arena == null) {
             return;

@@ -13,8 +13,11 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 
 /**
- * Random item rolls for in-match loot (whitelist vs blacklist modes per arena settings).
- * In blacklist mode, exclusions come only from arena {@code loot.blacklist} plus family toggles (potions, spawn eggs, etc.); there is no built-in block denylist.
+ * Random item rolls for in-match loot.
+ *
+ * <p>If whitelist mode is selected and the arena whitelist is empty, generation falls back to the
+ * same filtered-all-items pool as blacklist mode, so arena {@code loot.blacklist} is still
+ * respected.</p>
  */
 public final class LootGenerator {
 
@@ -69,7 +72,7 @@ public final class LootGenerator {
             return customItems.get(random.nextInt(customItems.size())).clone();
         }
 
-        List<Material> dynamicPool = buildDynamicWhitelistPool(settings);
+        List<Material> dynamicPool = buildBlacklistPool(settings);
         if (dynamicPool.isEmpty()) {
             return new ItemStack(Material.BREAD, 1);
         }
@@ -83,20 +86,6 @@ public final class LootGenerator {
         }
         Material material = pool.get(random.nextInt(pool.size()));
         return new ItemStack(material, 1);
-    }
-
-    private static List<Material> buildDynamicWhitelistPool(ArenaSettings settings) {
-        List<Material> pool = new ArrayList<Material>();
-        for (Material material : Material.values()) {
-            if (!material.isItem()) {
-                continue;
-            }
-            if (isBlockedByFamily(material, settings)) {
-                continue;
-            }
-            pool.add(material);
-        }
-        return pool;
     }
 
     private static boolean isBlockedByFamily(Material material, ArenaSettings settings) {

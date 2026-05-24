@@ -270,6 +270,11 @@ public final class PillarsCommand implements TabExecutor {
                 plugin.getMessageService().send(sender, "arena-missing", singletonReplacement("arena", args[1]));
                 return true;
             }
+            if (!plugin.getMatchManager().canEnterEditMode(arena)) {
+                plugin.getMessageService().send(sender, "arena-edit-busy", singletonReplacement("arena", arena.getName()));
+                return true;
+            }
+            plugin.getMatchManager().prepareArenaForEditing(arena);
             plugin.getArenaManager().snapshotArenaBeforeEdit(arena.getName());
             arena.setState(ArenaState.EDITING);
             plugin.getEditorManager().enterEditor(player.getUniqueId(), arena.getName());

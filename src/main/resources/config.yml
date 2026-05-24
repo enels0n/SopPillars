@@ -46,6 +46,7 @@ messages:
   arena-created: "&aArena &f%arena% &ahas been created."
   arena-missing: "&cArena &f%arena% &cwas not found."
   arena-deleted: "&aArena &f%arena% &ahas been removed."
+  arena-edit-busy: "&cArena &f%arena% &cis currently in an active game. Stop it first."
   arena-delete-busy: "&cArena &f%arena% &cis in use, being edited, or has players — stop the match first."
   not-player: "&cOnly players can use this command."
   arena-list-empty: "&eNo arenas have been created yet."
