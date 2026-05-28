@@ -212,6 +212,38 @@ public final class ArenaSnapshotManager {
                 block.setType(Material.AIR, true);
             }
         }
+        clearResidualFluidsBelowGameplay(match.getArena(), 2);
+    }
+
+    private void clearResidualFluidsBelowGameplay(PillarsArena arena, int layersBelow) {
+        if (arena == null) {
+            return;
+        }
+        SerializedCuboid cuboid = arena.getGameplayArea();
+        if (cuboid == null) {
+            return;
+        }
+        World world = Bukkit.getWorld(cuboid.getMin().getWorld());
+        if (world == null) {
+            return;
+        }
+        int minX = (int) Math.floor(Math.min(cuboid.getMin().getX(), cuboid.getMax().getX()));
+        int maxX = (int) Math.floor(Math.max(cuboid.getMin().getX(), cuboid.getMax().getX()));
+        int minZ = (int) Math.floor(Math.min(cuboid.getMin().getZ(), cuboid.getMax().getZ()));
+        int maxZ = (int) Math.floor(Math.max(cuboid.getMin().getZ(), cuboid.getMax().getZ()));
+        int minY = (int) Math.floor(Math.min(cuboid.getMin().getY(), cuboid.getMax().getY()));
+        int bottomY = Math.max(world.getMinHeight(), minY - Math.max(1, layersBelow));
+
+        for (int x = minX; x <= maxX; x++) {
+            for (int z = minZ; z <= maxZ; z++) {
+                for (int y = minY - 1; y >= bottomY; y--) {
+                    Block block = world.getBlockAt(x, y, z);
+                    if (isResidualFluidBlock(block.getType())) {
+                        block.setType(Material.AIR, true);
+                    }
+                }
+            }
+        }
     }
 
     private boolean isResidualFluidBlock(Material material) {

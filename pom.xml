@@ -5,7 +5,7 @@
 
     <groupId>net.enelson</groupId>
     <artifactId>SopPillars</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.1</version>
     <packaging>jar</packaging>
 
     <name>SopPillars</name>
@@ -67,7 +67,7 @@
         <dependency>
             <groupId>net.enelson</groupId>
             <artifactId>sop-party-api</artifactId>
-            <version>0.0.1-SNAPSHOT</version>
+            <version>1.0.1</version>
             <scope>provided</scope>
         </dependency>
         <dependency>

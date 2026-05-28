@@ -638,6 +638,7 @@ public final class MatchManager {
                     message,
                     "WAIT"
             );
+            logManagedChat(waitingMatch.getArena().getName(), formatted);
             for (UUID playerId : waitingMatch.getPlayers()) {
                 Player player = Bukkit.getPlayer(playerId);
                 if (player != null) {
@@ -670,6 +671,7 @@ public final class MatchManager {
                     senderAlive ? "ALIVE" : "SPEC"
             );
         }
+        logManagedChat(runningMatch.getArena().getName(), formatted);
 
         for (UUID playerId : runningMatch.getPlayers()) {
             Player player = Bukkit.getPlayer(playerId);
@@ -689,6 +691,11 @@ public final class MatchManager {
                 player.sendMessage(formatted);
             }
         }
+    }
+
+    private void logManagedChat(String arenaName, String formattedMessage) {
+        String plain = ChatColor.stripColor(formattedMessage);
+        plugin.getLogger().info("[chat:" + arenaName + "] " + (plain != null ? plain : formattedMessage));
     }
 
     public boolean isLobbyProtected(Player player) {

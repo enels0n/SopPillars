@@ -17,6 +17,7 @@ import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerItemConsumeEvent;
 import org.bukkit.event.player.PlayerShearEntityEvent;
 import org.bukkit.event.player.PlayerSwapHandItemsEvent;
+import org.bukkit.event.player.PlayerTeleportEvent;
 
 /**
  * Blocks spectators in a running match from affecting gameplay (interactions, drops, projectiles, fishing, consumables, harvest, shear).
@@ -135,5 +136,16 @@ public final class MatchSpectatorListener implements Listener {
         }
         event.setCancelled(true);
         plugin.getMessageService().send(event.getPlayer(), "spectator-no-interact");
+    }
+
+    @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
+    public void onSpectatorTeleport(PlayerTeleportEvent event) {
+        if (event.getCause() != PlayerTeleportEvent.TeleportCause.SPECTATE) {
+            return;
+        }
+        if (!plugin.getMatchManager().isRunningSpectator(event.getPlayer())) {
+            return;
+        }
+        event.setCancelled(true);
     }
 }
