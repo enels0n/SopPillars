@@ -1,6 +1,7 @@
 package net.enelson.soppillars.config;
 
 import net.enelson.soppillars.SopPillarsPlugin;
+import net.enelson.soppillars.loot.LootMode;
 import net.enelson.soppillars.model.ArenaSettings;
 import net.enelson.soppillars.model.SerializedLocation;
 import net.enelson.soppillars.model.VictoryEffectShape;
@@ -25,6 +26,7 @@ public final class PillarsConfig {
     private ArenaSettings defaultArenaSettings;
     private SerializedLocation defaultPostGameSpawn;
     private boolean blockNaturalSpawnsInArenas;
+    private boolean manageChat;
 
     public PillarsConfig(SopPillarsPlugin plugin) {
         this.plugin = plugin;
@@ -53,13 +55,20 @@ public final class PillarsConfig {
                 plugin.getConfig().getBoolean("settings.default-allow-place-blocks", true),
                 plugin.getConfig().getBoolean("settings.default-allow-break-original-blocks", false),
                 plugin.getConfig().getBoolean("settings.default-allow-break-player-blocks", true),
+                plugin.getConfig().getBoolean("settings.default-allow-explosion-block-damage", false),
+                plugin.getConfig().getBoolean("settings.default-allow-piston-block-movement", false),
+                plugin.getConfig().getBoolean("settings.default-allow-fire-block-burn", false),
                 plugin.getConfig().getBoolean("settings.default-allow-smooth-fall", false),
                 plugin.getConfig().getBoolean("settings.default-friendly-fire", false),
                 new ArrayList<String>(plugin.getConfig().getStringList("settings.default-allowed-commands"))
         );
         this.defaultArenaSettings.setLootEnabled(plugin.getConfig().getBoolean("settings.default-loot-enabled", true));
         this.defaultArenaSettings.setLootIntervalSeconds(plugin.getConfig().getInt("settings.default-loot-interval-seconds", 8));
-        this.defaultArenaSettings.setBlacklistMode(plugin.getConfig().getBoolean("settings.default-loot-blacklist-mode", false));
+        this.defaultArenaSettings.setLootMode(resolveConfiguredLootMode(
+                plugin.getConfig().getString("settings.default-loot-mode"),
+                plugin.getConfig().getBoolean("settings.default-loot-blacklist-mode", false)
+        ));
+        this.defaultArenaSettings.setLootWhitelistRollChance(plugin.getConfig().getDouble("settings.default-loot-whitelist-roll-chance", 0.0D));
         this.defaultArenaSettings.setLootBlacklist(new ArrayList<String>(plugin.getConfig().getStringList("settings.default-loot-blacklist")));
         this.defaultArenaSettings.setSmoothFallSeconds(plugin.getConfig().getInt("settings.default-smooth-fall-seconds", 10));
         this.defaultArenaSettings.setCelebrationSeconds(plugin.getConfig().getInt("settings.default-celebration-seconds", 10));
@@ -72,10 +81,15 @@ public final class PillarsConfig {
         ConfigurationSection spawnSection = plugin.getConfig().getConfigurationSection("settings.global-spawn");
         this.defaultPostGameSpawn = SerializedLocation.fromSection(spawnSection);
         this.blockNaturalSpawnsInArenas = plugin.getConfig().getBoolean("settings.block-natural-spawns-in-arenas", true);
+        this.manageChat = plugin.getConfig().getBoolean("settings.manage-chat", true);
     }
 
     public boolean isBlockNaturalSpawnsInArenas() {
         return blockNaturalSpawnsInArenas;
+    }
+
+    public boolean isManageChat() {
+        return manageChat;
     }
 
     public File getArenasFolder() {
@@ -119,17 +133,21 @@ public final class PillarsConfig {
                 defaultArenaSettings.isAllowPlaceBlocks(),
                 defaultArenaSettings.isAllowBreakOriginalBlocks(),
                 defaultArenaSettings.isAllowBreakPlayerBlocks(),
+                defaultArenaSettings.isAllowExplosionBlockDamage(),
+                defaultArenaSettings.isAllowPistonBlockMovement(),
+                defaultArenaSettings.isAllowFireBlockBurn(),
                 defaultArenaSettings.isAllowSmoothFall(),
                 defaultArenaSettings.isFriendlyFire(),
                 commands
         );
-        settings.setBlacklistMode(defaultArenaSettings.isBlacklistMode());
+        settings.setLootMode(defaultArenaSettings.getLootMode());
         settings.setAllowEnchantedBooks(defaultArenaSettings.isAllowEnchantedBooks());
         settings.setAllowPotions(defaultArenaSettings.isAllowPotions());
         settings.setAllowTippedArrows(defaultArenaSettings.isAllowTippedArrows());
         settings.setAllowSpawnEggs(defaultArenaSettings.isAllowSpawnEggs());
         settings.setLootEnabled(defaultArenaSettings.isLootEnabled());
         settings.setLootIntervalSeconds(defaultArenaSettings.getLootIntervalSeconds());
+        settings.setLootWhitelistRollChance(defaultArenaSettings.getLootWhitelistRollChance());
         settings.setLootBlacklist(new ArrayList<String>(defaultArenaSettings.getLootBlacklist()));
         settings.setSmoothFallSeconds(defaultArenaSettings.getSmoothFallSeconds());
         settings.setCelebrationSeconds(defaultArenaSettings.getCelebrationSeconds());
@@ -181,6 +199,13 @@ public final class PillarsConfig {
         } catch (IOException exception) {
             plugin.getLogger().warning("Failed to restore cages/default.schem: " + exception.getMessage());
         }
+    }
+
+    private LootMode resolveConfiguredLootMode(String configured, boolean legacyBlacklistMode) {
+        if (configured != null && !configured.trim().isEmpty()) {
+            return LootMode.parse(configured, LootMode.WHITELIST);
+        }
+        return legacyBlacklistMode ? LootMode.BLACKLIST : LootMode.WHITELIST;
     }
 
 }

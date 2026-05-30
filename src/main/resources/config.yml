@@ -156,6 +156,9 @@ messages:
 settings:
   # Cancel NATURAL / JOCKEY / PATROL mob spawns inside arena lobby or gameplay cuboids.
   block-natural-spawns-in-arenas: true
+  # When true, SopPillars fully manages waiting/match chat routing and formatting.
+  # Disable this if you want another plugin (for example SopChat) to handle chat instead.
+  manage-chat: true
   default-countdown-seconds: 10
   default-cage-seconds: 5
   default-pre-border-delay-seconds: 30
@@ -175,12 +178,21 @@ settings:
   default-allow-place-blocks: true
   default-allow-break-original-blocks: false
   default-allow-break-player-blocks: true
+  default-allow-explosion-block-damage: false
+  default-allow-piston-block-movement: false
+  default-allow-fire-block-burn: false
   default-allow-smooth-fall: false
   default-smooth-fall-seconds: 10
   default-friendly-fire: false
   default-loot-enabled: true
   default-loot-interval-seconds: 8
+  # loot modes: whitelist, blacklist, mixed
+  default-loot-mode: whitelist
+  # Legacy fallback for old configs; new versions use default-loot-mode above.
   default-loot-blacklist-mode: false
+  # Mixed mode only. 0 = whitelist items are merged into the normal pool with equal per-entry chance.
+  # >0 = chance to roll from explicit whitelist items before rolling from the normal pool.
+  default-loot-whitelist-roll-chance: 0.0
   # Blacklist loot mode only: material names to exclude from rolls (e.g. BEDROCK, COMMAND_BLOCK). Empty = no exclusions except spawn/potion/book toggles below.
   default-loot-blacklist:
     - TEST_BLOCK

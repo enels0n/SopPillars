@@ -1,6 +1,7 @@
 package net.enelson.soppillars.arena;
 
 import net.enelson.soppillars.SopPillarsPlugin;
+import net.enelson.soppillars.loot.LootMode;
 import net.enelson.soppillars.model.ArenaSettings;
 import net.enelson.soppillars.model.SerializedCuboid;
 import net.enelson.soppillars.model.SerializedLocation;
@@ -279,6 +280,7 @@ public final class ArenaManager {
         int playersPerTeam = config.getInt("arena.players-per-team", 1);
         String world = config.getString("arena.world", "");
         ArenaState state = parseState(config.getString("arena.state", ArenaState.DISABLED.name()));
+        state = normalizeLoadedState(state);
         List<String> teamNames = config.getStringList("arena.team-names");
         if (teamNames.isEmpty()) {
             for (int index = 1; index <= teams; index++) {
@@ -335,6 +337,21 @@ public final class ArenaManager {
         }
     }
 
+    private ArenaState normalizeLoadedState(ArenaState state) {
+        if (state == null) {
+            return ArenaState.DISABLED;
+        }
+        switch (state) {
+            case STARTING:
+            case RUNNING:
+            case ENDING:
+            case RESTORING:
+                return ArenaState.WAITING;
+            default:
+                return state;
+        }
+    }
+
     private void saveSettings(ConfigurationSection section, ArenaSettings settings) {
         section.set("countdown-seconds", settings.getCountdownSeconds());
         section.set("cage-seconds", settings.getCageSeconds());
@@ -350,9 +367,13 @@ public final class ArenaManager {
         section.set("allow-place-blocks", settings.isAllowPlaceBlocks());
         section.set("allow-break-original-blocks", settings.isAllowBreakOriginalBlocks());
         section.set("allow-break-player-blocks", settings.isAllowBreakPlayerBlocks());
+        section.set("allow-explosion-block-damage", settings.isAllowExplosionBlockDamage());
+        section.set("allow-piston-block-movement", settings.isAllowPistonBlockMovement());
+        section.set("allow-fire-block-burn", settings.isAllowFireBlockBurn());
         section.set("allow-smooth-fall", settings.isAllowSmoothFall());
         section.set("smooth-fall-seconds", settings.getSmoothFallSeconds());
         section.set("friendly-fire", settings.isFriendlyFire());
+        section.set("loot.mode", settings.getLootMode().name().toLowerCase(Locale.ROOT));
         section.set("loot.blacklist-mode", settings.isBlacklistMode());
         section.set("loot.allow-enchanted-books", settings.isAllowEnchantedBooks());
         section.set("loot.allow-potions", settings.isAllowPotions());
@@ -360,6 +381,7 @@ public final class ArenaManager {
         section.set("loot.allow-spawn-eggs", settings.isAllowSpawnEggs());
         section.set("loot.enabled", settings.isLootEnabled());
         section.set("loot.interval-seconds", settings.getLootIntervalSeconds());
+        section.set("loot.whitelist-roll-chance", settings.getLootWhitelistRollChance());
         section.set("loot.whitelist", null);
         section.set("loot.whitelist-items", new ArrayList<ItemStack>(settings.getLootWhitelistItems()));
         section.set("loot.blacklist", new ArrayList<String>(settings.getLootBlacklist()));
@@ -392,16 +414,24 @@ public final class ArenaManager {
         defaults.setAllowPlaceBlocks(section.getBoolean("allow-place-blocks", defaults.isAllowPlaceBlocks()));
         defaults.setAllowBreakOriginalBlocks(section.getBoolean("allow-break-original-blocks", defaults.isAllowBreakOriginalBlocks()));
         defaults.setAllowBreakPlayerBlocks(section.getBoolean("allow-break-player-blocks", defaults.isAllowBreakPlayerBlocks()));
+        defaults.setAllowExplosionBlockDamage(section.getBoolean("allow-explosion-block-damage", defaults.isAllowExplosionBlockDamage()));
+        defaults.setAllowPistonBlockMovement(section.getBoolean("allow-piston-block-movement", defaults.isAllowPistonBlockMovement()));
+        defaults.setAllowFireBlockBurn(section.getBoolean("allow-fire-block-burn", defaults.isAllowFireBlockBurn()));
         defaults.setAllowSmoothFall(section.getBoolean("allow-smooth-fall", defaults.isAllowSmoothFall()));
         defaults.setSmoothFallSeconds(section.getInt("smooth-fall-seconds", defaults.getSmoothFallSeconds()));
         defaults.setFriendlyFire(section.getBoolean("friendly-fire", defaults.isFriendlyFire()));
-        defaults.setBlacklistMode(section.getBoolean("loot.blacklist-mode", defaults.isBlacklistMode()));
+        defaults.setLootMode(resolveArenaLootMode(
+                section.getString("loot.mode"),
+                section.getBoolean("loot.blacklist-mode", defaults.isBlacklistMode()),
+                defaults.getLootMode()
+        ));
         defaults.setAllowEnchantedBooks(section.getBoolean("loot.allow-enchanted-books", defaults.isAllowEnchantedBooks()));
         defaults.setAllowPotions(section.getBoolean("loot.allow-potions", defaults.isAllowPotions()));
         defaults.setAllowTippedArrows(section.getBoolean("loot.allow-tipped-arrows", defaults.isAllowTippedArrows()));
         defaults.setAllowSpawnEggs(section.getBoolean("loot.allow-spawn-eggs", defaults.isAllowSpawnEggs()));
         defaults.setLootEnabled(section.getBoolean("loot.enabled", defaults.isLootEnabled()));
         defaults.setLootIntervalSeconds(section.getInt("loot.interval-seconds", defaults.getLootIntervalSeconds()));
+        defaults.setLootWhitelistRollChance(section.getDouble("loot.whitelist-roll-chance", defaults.getLootWhitelistRollChance()));
         defaults.setLootWhitelistItems(loadItemStackList(section, "loot.whitelist-items"));
         defaults.setLootBlacklist(section.getStringList("loot.blacklist"));
         defaults.setAllowedCommands(section.getStringList("allowed-commands"));
@@ -433,5 +463,12 @@ public final class ArenaManager {
             }
         }
         return items;
+    }
+
+    private LootMode resolveArenaLootMode(String rawMode, boolean legacyBlacklistMode, LootMode fallback) {
+        if (rawMode != null && !rawMode.trim().isEmpty()) {
+            return LootMode.parse(rawMode, fallback);
+        }
+        return legacyBlacklistMode ? LootMode.BLACKLIST : LootMode.WHITELIST;
     }
 }

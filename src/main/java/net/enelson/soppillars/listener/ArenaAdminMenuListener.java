@@ -34,7 +34,13 @@ public final class ArenaAdminMenuListener implements Listener {
         if (ArenaAdminMenus.isGlobalSettingsTitle(title)) {
             event.setCancelled(true);
             if (event.getCurrentItem() != null) {
-                ArenaAdminMenus.handleGlobalSettingsClick(plugin, (Player) event.getWhoClicked(), event.getSlot());
+                ArenaAdminMenus.handleGlobalSettingsClick(
+                        plugin,
+                        (Player) event.getWhoClicked(),
+                        event.getSlot(),
+                        event.isRightClick(),
+                        event.isShiftClick()
+                );
             }
             return;
         }

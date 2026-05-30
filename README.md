@@ -14,7 +14,7 @@ party integration, cosmetics, PlaceholderAPI support, and arena rollback flow.
 - Party-aware queueing via `SopParty`, with proper solo fallback.
 - Per-arena settings menu (`/pillars settings`) with immediate save.
 - Improved loot UX:
-  - explicit `WHITELIST/BLACKLIST` mode switch,
+  - explicit `WHITELIST/BLACKLIST/MIXED` mode switch,
   - inventory editor for arena whitelist items,
   - inventory editors for arena/global blacklist lists.
 - Kit system with player selection and `No kit` option.
@@ -140,7 +140,7 @@ Kit files are stored in `plugins/SopPillars/kits/`.
 Arena settings menu (`/pillars settings`) includes:
 
 - loot interval,
-- explicit loot mode (`WHITELIST` or `BLACKLIST`),
+- explicit loot mode (`WHITELIST`, `BLACKLIST`, or `MIXED`),
 - arena list editors:
   - `Edit arena whitelist`
   - `Edit arena blacklist`
@@ -156,7 +156,24 @@ List editor workflow:
 - add/remove items,
 - close inventory to save list.
 
-### Whitelist Mode
+### Loot Modes
+
+- `WHITELIST` - only explicit whitelist items can roll
+- `BLACKLIST` - normal material pool except blocked blacklist entries
+- `MIXED` - normal material pool plus explicit whitelist items
+
+`MIXED` also supports:
+
+```yml
+loot:
+  mode: mixed
+  whitelist-roll-chance: 0.0
+```
+
+- `0.0` means whitelist items join the same overall pool naturally
+- `> 0.0` gives the explicit whitelist pool its own roll chance
+
+### Whitelist Items
 
 Whitelist mode is now item-based.
 
@@ -397,6 +414,8 @@ Important options:
 - `settings.global-spawn` - fallback teleport location.
 - `settings.default-min-players` and `settings.default-min-filled-teams`.
 - `settings.default-loot-blacklist-mode`.
+- `settings.manage-chat`.
+- `settings.default-loot-whitelist-roll-chance`.
 - `settings.default-loot-blacklist`.
 
 Arena files are stored in `plugins/SopPillars/arenas/`.

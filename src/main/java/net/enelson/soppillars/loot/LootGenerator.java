@@ -14,10 +14,6 @@ import java.util.concurrent.ThreadLocalRandom;
 
 /**
  * Random item rolls for in-match loot.
- *
- * <p>If whitelist mode is selected and the arena whitelist is empty, generation falls back to the
- * same filtered-all-items pool as blacklist mode, so arena {@code loot.blacklist} is still
- * respected.</p>
  */
 public final class LootGenerator {
 
@@ -28,10 +24,16 @@ public final class LootGenerator {
         if (!settings.isLootEnabled()) {
             return null;
         }
-        if (settings.isBlacklistMode()) {
-            return rollBlacklist(blacklistPool, random);
+        LootMode mode = settings.getLootMode();
+        switch (mode) {
+            case BLACKLIST:
+                return rollBlacklist(blacklistPool, random);
+            case MIXED:
+                return rollMixed(settings, blacklistPool, random);
+            case WHITELIST:
+            default:
+                return rollWhitelist(settings, random);
         }
-        return rollWhitelist(settings, random);
     }
 
     /**
@@ -62,12 +64,7 @@ public final class LootGenerator {
     }
 
     private static ItemStack rollWhitelist(ArenaSettings settings, Random random) {
-        List<ItemStack> customItems = new ArrayList<ItemStack>();
-        for (ItemStack itemStack : settings.getLootWhitelistItems()) {
-            if (itemStack != null && itemStack.getType().isItem()) {
-                customItems.add(itemStack.clone());
-            }
-        }
+        List<ItemStack> customItems = collectWhitelistItems(settings);
         if (!customItems.isEmpty()) {
             return customItems.get(random.nextInt(customItems.size())).clone();
         }
@@ -78,6 +75,42 @@ public final class LootGenerator {
         }
         Material material = dynamicPool.get(random.nextInt(dynamicPool.size()));
         return new ItemStack(material, 1);
+    }
+
+    private static ItemStack rollMixed(ArenaSettings settings, List<Material> pool, Random random) {
+        List<ItemStack> customItems = collectWhitelistItems(settings);
+        List<Material> dynamicPool = (pool == null || pool.isEmpty()) ? buildBlacklistPool(settings) : pool;
+        if (customItems.isEmpty()) {
+            return rollBlacklist(dynamicPool, random);
+        }
+        if (dynamicPool.isEmpty()) {
+            return customItems.get(random.nextInt(customItems.size())).clone();
+        }
+
+        double whitelistRollChance = settings.getLootWhitelistRollChance();
+        if (whitelistRollChance > 0.0D) {
+            if (random.nextDouble() < whitelistRollChance) {
+                return customItems.get(random.nextInt(customItems.size())).clone();
+            }
+            return rollBlacklist(dynamicPool, random);
+        }
+
+        int totalEntries = dynamicPool.size() + customItems.size();
+        int rolledIndex = random.nextInt(totalEntries);
+        if (rolledIndex < dynamicPool.size()) {
+            return new ItemStack(dynamicPool.get(rolledIndex), 1);
+        }
+        return customItems.get(rolledIndex - dynamicPool.size()).clone();
+    }
+
+    private static List<ItemStack> collectWhitelistItems(ArenaSettings settings) {
+        List<ItemStack> customItems = new ArrayList<ItemStack>();
+        for (ItemStack itemStack : settings.getLootWhitelistItems()) {
+            if (itemStack != null && itemStack.getType().isItem()) {
+                customItems.add(itemStack.clone());
+            }
+        }
+        return customItems;
     }
 
     private static ItemStack rollBlacklist(List<Material> pool, Random random) {

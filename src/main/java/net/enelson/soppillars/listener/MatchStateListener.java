@@ -47,6 +47,9 @@ public final class MatchStateListener implements Listener {
 
     @EventHandler(priority = EventPriority.HIGHEST)
     public void onChat(AsyncPlayerChatEvent event) {
+        if (!plugin.getPillarsConfig().isManageChat()) {
+            return;
+        }
         if (!plugin.getMatchManager().isManagedChatPlayer(event.getPlayer())) {
             return;
         }
@@ -59,6 +62,9 @@ public final class MatchStateListener implements Listener {
      */
     @EventHandler(priority = EventPriority.NORMAL, ignoreCancelled = true)
     public void onChatStripArenaRecipients(AsyncPlayerChatEvent event) {
+        if (!plugin.getPillarsConfig().isManageChat()) {
+            return;
+        }
         if (plugin.getMatchManager().isManagedChatPlayer(event.getPlayer())) {
             return;
         }

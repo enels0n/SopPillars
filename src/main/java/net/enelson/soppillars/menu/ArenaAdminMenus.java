@@ -2,6 +2,7 @@ package net.enelson.soppillars.menu;
 
 import net.enelson.soppillars.SopPillarsPlugin;
 import net.enelson.soppillars.arena.PillarsArena;
+import net.enelson.soppillars.loot.LootMode;
 import net.enelson.soppillars.model.ArenaSettings;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
@@ -78,7 +79,7 @@ public final class ArenaAdminMenus {
                 settings.setAllowSmoothFall(!settings.isAllowSmoothFall());
                 break;
             case 6:
-                settings.setBlacklistMode(!settings.isBlacklistMode());
+                settings.setLootMode(settings.getLootMode().next());
                 break;
             case 7:
                 settings.setCountdownSeconds(adjustInt(settings.getCountdownSeconds(), rightClick, delta, 1));
@@ -128,6 +129,9 @@ public final class ArenaAdminMenus {
             case 22:
                 openGlobalSettings(plugin, player);
                 return;
+            case 23:
+                settings.setLootWhitelistRollChance(adjustChance(settings.getLootWhitelistRollChance(), rightClick, shiftClick ? 0.10D : 0.05D));
+                break;
             default:
                 return;
         }
@@ -145,7 +149,7 @@ public final class ArenaAdminMenus {
         inventory.setItem(3, toggleRow(Material.DIAMOND_SWORD, "Friendly fire", s.isFriendlyFire()));
         inventory.setItem(4, toggleRow(Material.LAVA_BUCKET, "Lava rises during match", s.isLavaEnabled()));
         inventory.setItem(5, toggleRow(Material.FEATHER, "Slow fall after cages open", s.isAllowSmoothFall()));
-        inventory.setItem(6, lootModeRow(s.isBlacklistMode()));
+        inventory.setItem(6, lootModeRow(s.getLootMode()));
         inventory.setItem(7, timingRow(Material.CLOCK, "Countdown (sec)", s.getCountdownSeconds()));
         inventory.setItem(8, timingRow(Material.GLASS, "Cage duration (sec)", s.getCageSeconds()));
         inventory.setItem(9, timingRow(Material.IRON_BARS, "Pre-border delay (sec)", s.getPreBorderDelaySeconds()));
@@ -162,23 +166,31 @@ public final class ArenaAdminMenus {
         inventory.setItem(20, editorRow(Material.LIME_SHULKER_BOX, "Edit arena whitelist"));
         inventory.setItem(21, editorRow(Material.BLACK_SHULKER_BOX, "Edit arena blacklist"));
         inventory.setItem(22, editorRow(Material.NETHER_STAR, "Open global loot settings"));
-        for (int slot = 23; slot <= 25; slot++) {
+        inventory.setItem(23, chanceRow(Material.RABBIT_FOOT, "Whitelist roll chance", s.getLootWhitelistRollChance()));
+        for (int slot = 24; slot <= 25; slot++) {
             inventory.setItem(slot, filler());
         }
         inventory.setItem(26, infoBook(plugin, arena));
     }
 
-    public static void handleGlobalSettingsClick(SopPillarsPlugin plugin, Player player, int slot) {
+    public static void handleGlobalSettingsClick(SopPillarsPlugin plugin, Player player, int slot, boolean rightClick, boolean shiftClick) {
         switch (slot) {
             case 0:
-                boolean blacklistMode = plugin.getConfig().getBoolean("settings.default-loot-blacklist-mode", false);
-                plugin.getConfig().set("settings.default-loot-blacklist-mode", !blacklistMode);
+                LootMode next = resolveGlobalLootMode(plugin).next();
+                plugin.getConfig().set("settings.default-loot-mode", next.name().toLowerCase(Locale.ROOT));
+                plugin.getConfig().set("settings.default-loot-blacklist-mode", next == LootMode.BLACKLIST);
                 plugin.saveConfig();
                 plugin.getPillarsConfig().reload();
                 break;
             case 1:
                 plugin.getLootListEditorManager().openGlobalBlacklist(player);
                 return;
+            case 2:
+                double currentChance = plugin.getConfig().getDouble("settings.default-loot-whitelist-roll-chance", 0.0D);
+                plugin.getConfig().set("settings.default-loot-whitelist-roll-chance", adjustChance(currentChance, rightClick, shiftClick ? 0.10D : 0.05D));
+                plugin.saveConfig();
+                plugin.getPillarsConfig().reload();
+                break;
             default:
                 return;
         }
@@ -188,10 +200,12 @@ public final class ArenaAdminMenus {
     }
 
     private static void fillGlobalSettings(SopPillarsPlugin plugin, Inventory inventory) {
-        boolean blacklistMode = plugin.getConfig().getBoolean("settings.default-loot-blacklist-mode", false);
-        inventory.setItem(0, lootModeRow(blacklistMode));
+        LootMode lootMode = resolveGlobalLootMode(plugin);
+        inventory.setItem(0, lootModeRow(lootMode));
         inventory.setItem(1, editorRow(Material.BLACK_SHULKER_BOX, "Edit global blacklist"));
-        for (int slot = 2; slot <= 25; slot++) {
+        inventory.setItem(2, chanceRow(Material.RABBIT_FOOT, "Default whitelist roll chance",
+                plugin.getConfig().getDouble("settings.default-loot-whitelist-roll-chance", 0.0D)));
+        for (int slot = 3; slot <= 25; slot++) {
             inventory.setItem(slot, filler());
         }
         ItemStack book = new ItemStack(Material.WRITTEN_BOOK);
@@ -200,7 +214,7 @@ public final class ArenaAdminMenus {
             meta.setDisplayName(ChatColor.AQUA + "Global defaults");
             meta.setLore(Arrays.asList(
                     ChatColor.GRAY + "Used for new arenas and defaults.",
-                    ChatColor.DARK_GRAY + "Only blacklist is global."
+                    ChatColor.DARK_GRAY + "Mode, blacklist, and whitelist chance are global."
             ));
             book.setItemMeta(meta);
         }
@@ -290,15 +304,31 @@ public final class ArenaAdminMenus {
         return item;
     }
 
-    private static ItemStack lootModeRow(boolean blacklistMode) {
+    private static ItemStack lootModeRow(LootMode lootMode) {
         ItemStack item = new ItemStack(Material.BOOK);
         ItemMeta meta = item.getItemMeta();
         if (meta != null) {
             meta.setDisplayName(ChatColor.GOLD + "Loot mode");
-            String mode = blacklistMode ? "BLACKLIST" : "WHITELIST";
             meta.setLore(Arrays.asList(
-                    ChatColor.YELLOW + "Mode: " + ChatColor.GREEN + mode,
+                    ChatColor.YELLOW + "Mode: " + ChatColor.GREEN + lootMode.name(),
                     ChatColor.GRAY + "Click to switch"
+            ));
+            meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
+            item.setItemMeta(meta);
+        }
+        return item;
+    }
+
+    private static ItemStack chanceRow(Material icon, String label, double chance) {
+        ItemStack item = new ItemStack(icon);
+        ItemMeta meta = item.getItemMeta();
+        if (meta != null) {
+            meta.setDisplayName(ChatColor.GOLD + label);
+            meta.setLore(Arrays.asList(
+                    ChatColor.YELLOW + "Value: " + ChatColor.GREEN + String.format(Locale.US, "%.2f", chance),
+                    ChatColor.GRAY + "0 = equal mixed pool chance",
+                    ChatColor.GRAY + "Left: +0.05, Right: -0.05",
+                    ChatColor.DARK_GRAY + "Shift-click: +/-0.10"
             ));
             meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
             item.setItemMeta(meta);
@@ -330,5 +360,26 @@ public final class ArenaAdminMenus {
 
     public static boolean isGlobalSettingsTitle(String title) {
         return GLOBAL_SETTINGS_TITLE.equals(title);
+    }
+
+    private static double adjustChance(double current, boolean rightClick, double delta) {
+        double next = rightClick ? current - delta : current + delta;
+        if (next < 0.0D) {
+            return 0.0D;
+        }
+        if (next > 1.0D) {
+            return 1.0D;
+        }
+        return Math.round(next * 100.0D) / 100.0D;
+    }
+
+    private static LootMode resolveGlobalLootMode(SopPillarsPlugin plugin) {
+        String configured = plugin.getConfig().getString("settings.default-loot-mode");
+        if (configured != null && !configured.trim().isEmpty()) {
+            return LootMode.parse(configured, LootMode.WHITELIST);
+        }
+        return plugin.getConfig().getBoolean("settings.default-loot-blacklist-mode", false)
+                ? LootMode.BLACKLIST
+                : LootMode.WHITELIST;
     }
 }

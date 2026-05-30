@@ -1,5 +1,6 @@
 package net.enelson.soppillars.model;
 
+import net.enelson.soppillars.loot.LootMode;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
@@ -22,10 +23,13 @@ public final class ArenaSettings {
     private boolean allowPlaceBlocks;
     private boolean allowBreakOriginalBlocks;
     private boolean allowBreakPlayerBlocks;
+    private boolean allowExplosionBlockDamage;
+    private boolean allowPistonBlockMovement;
+    private boolean allowFireBlockBurn;
     private boolean allowSmoothFall;
     private int smoothFallSeconds;
     private boolean friendlyFire;
-    private boolean blacklistMode;
+    private LootMode lootMode;
     private boolean allowEnchantedBooks;
     private boolean allowPotions;
     private boolean allowTippedArrows;
@@ -33,6 +37,7 @@ public final class ArenaSettings {
     private List<String> allowedCommands;
     private boolean lootEnabled;
     private int lootIntervalSeconds;
+    private double lootWhitelistRollChance;
     private List<ItemStack> lootWhitelistItems;
     private List<String> lootBlacklist;
     private int celebrationSeconds;
@@ -57,6 +62,9 @@ public final class ArenaSettings {
                                          boolean allowPlaceBlocks,
                                          boolean allowBreakOriginalBlocks,
                                          boolean allowBreakPlayerBlocks,
+                                         boolean allowExplosionBlockDamage,
+                                         boolean allowPistonBlockMovement,
+                                         boolean allowFireBlockBurn,
                                          boolean allowSmoothFall,
                                          boolean friendlyFire,
                                          List<String> allowedCommands) {
@@ -75,10 +83,13 @@ public final class ArenaSettings {
         settings.allowPlaceBlocks = allowPlaceBlocks;
         settings.allowBreakOriginalBlocks = allowBreakOriginalBlocks;
         settings.allowBreakPlayerBlocks = allowBreakPlayerBlocks;
+        settings.allowExplosionBlockDamage = allowExplosionBlockDamage;
+        settings.allowPistonBlockMovement = allowPistonBlockMovement;
+        settings.allowFireBlockBurn = allowFireBlockBurn;
         settings.allowSmoothFall = allowSmoothFall;
         settings.smoothFallSeconds = 10;
         settings.friendlyFire = friendlyFire;
-        settings.blacklistMode = false;
+        settings.lootMode = LootMode.WHITELIST;
         settings.allowEnchantedBooks = false;
         settings.allowPotions = true;
         settings.allowTippedArrows = true;
@@ -86,6 +97,7 @@ public final class ArenaSettings {
         settings.allowedCommands = new ArrayList<String>(allowedCommands);
         settings.lootEnabled = true;
         settings.lootIntervalSeconds = 8;
+        settings.lootWhitelistRollChance = 0.0D;
         settings.lootWhitelistItems = new ArrayList<ItemStack>();
         settings.lootBlacklist = new ArrayList<String>();
         settings.celebrationSeconds = 10;
@@ -210,6 +222,30 @@ public final class ArenaSettings {
         this.allowBreakPlayerBlocks = allowBreakPlayerBlocks;
     }
 
+    public boolean isAllowExplosionBlockDamage() {
+        return allowExplosionBlockDamage;
+    }
+
+    public void setAllowExplosionBlockDamage(boolean allowExplosionBlockDamage) {
+        this.allowExplosionBlockDamage = allowExplosionBlockDamage;
+    }
+
+    public boolean isAllowPistonBlockMovement() {
+        return allowPistonBlockMovement;
+    }
+
+    public void setAllowPistonBlockMovement(boolean allowPistonBlockMovement) {
+        this.allowPistonBlockMovement = allowPistonBlockMovement;
+    }
+
+    public boolean isAllowFireBlockBurn() {
+        return allowFireBlockBurn;
+    }
+
+    public void setAllowFireBlockBurn(boolean allowFireBlockBurn) {
+        this.allowFireBlockBurn = allowFireBlockBurn;
+    }
+
     public boolean isAllowSmoothFall() {
         return allowSmoothFall;
     }
@@ -235,11 +271,19 @@ public final class ArenaSettings {
     }
 
     public boolean isBlacklistMode() {
-        return blacklistMode;
+        return lootMode == LootMode.BLACKLIST;
     }
 
     public void setBlacklistMode(boolean blacklistMode) {
-        this.blacklistMode = blacklistMode;
+        this.lootMode = blacklistMode ? LootMode.BLACKLIST : LootMode.WHITELIST;
+    }
+
+    public LootMode getLootMode() {
+        return lootMode == null ? LootMode.WHITELIST : lootMode;
+    }
+
+    public void setLootMode(LootMode lootMode) {
+        this.lootMode = lootMode == null ? LootMode.WHITELIST : lootMode;
     }
 
     public boolean isAllowEnchantedBooks() {
@@ -296,6 +340,20 @@ public final class ArenaSettings {
 
     public void setLootIntervalSeconds(int lootIntervalSeconds) {
         this.lootIntervalSeconds = lootIntervalSeconds;
+    }
+
+    public double getLootWhitelistRollChance() {
+        return lootWhitelistRollChance;
+    }
+
+    public void setLootWhitelistRollChance(double lootWhitelistRollChance) {
+        if (lootWhitelistRollChance < 0.0D) {
+            this.lootWhitelistRollChance = 0.0D;
+        } else if (lootWhitelistRollChance > 1.0D) {
+            this.lootWhitelistRollChance = 1.0D;
+        } else {
+            this.lootWhitelistRollChance = lootWhitelistRollChance;
+        }
     }
 
     public List<ItemStack> getLootWhitelistItems() {
