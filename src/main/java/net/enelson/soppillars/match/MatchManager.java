@@ -115,6 +115,7 @@ public final class MatchManager {
         lastLobbyBoundsTeleportAt.clear();
         restoreAllOnlineSavedStates();
         savedStateByPlayer.clear();
+        normalizeIdleArenaStates();
     }
 
     public void shutdownAndEvacuate() {
@@ -164,6 +165,7 @@ public final class MatchManager {
             teleportToGlobalSpawn(player);
         }
         savedStateByPlayer.clear();
+        normalizeIdleArenaStates();
     }
 
     public void startTicker() {
@@ -216,6 +218,7 @@ public final class MatchManager {
             return false;
         }
 
+        healStaleArenaState(arena);
         if (arena.getState() != ArenaState.WAITING) {
             plugin.getMessageService().send(player, "arena-not-joinable", replacement("arena", arena.getName()));
             return false;
@@ -1515,23 +1518,60 @@ public final class MatchManager {
         runningMatches.remove(normalize(arena.getName()));
 
         arena.setState(ArenaState.RESTORING);
-        plugin.getArenaSnapshotManager().restoreArenaBaseline(arena);
-        plugin.getArenaSnapshotManager().clearForeignEntities(arena);
-        plugin.getArenaSnapshotManager().clearTrackedResidualFluids(match);
-        Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
-            @Override
-            public void run() {
-                plugin.getArenaSnapshotManager().clearTrackedResidualFluids(match);
-            }
-        }, 2L);
-        Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
-            @Override
-            public void run() {
-                plugin.getArenaSnapshotManager().clearTrackedResidualFluids(match);
-            }
-        }, 10L);
-        plugin.getStatistics().recordMatchFinished(match, match.getLastWinningTeam());
+        try {
+            plugin.getArenaSnapshotManager().restoreArenaBaseline(arena);
+            plugin.getArenaSnapshotManager().clearForeignEntities(arena);
+            plugin.getArenaSnapshotManager().clearTrackedResidualFluids(match);
+            Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+                @Override
+                public void run() {
+                    plugin.getArenaSnapshotManager().clearTrackedResidualFluids(match);
+                }
+            }, 2L);
+            Bukkit.getScheduler().runTaskLater(plugin, new Runnable() {
+                @Override
+                public void run() {
+                    plugin.getArenaSnapshotManager().clearTrackedResidualFluids(match);
+                }
+            }, 10L);
+            plugin.getStatistics().recordMatchFinished(match, match.getLastWinningTeam());
+        } catch (Throwable throwable) {
+            plugin.getLogger().severe("Failed to finish/restore arena " + arena.getName() + ": " + throwable.getMessage());
+            throwable.printStackTrace();
+        } finally {
+            forceArenaWaiting(arena);
+        }
+    }
 
+    private void healStaleArenaState(PillarsArena arena) {
+        if (arena == null) {
+            return;
+        }
+        String arenaName = normalize(arena.getName());
+        ArenaState state = arena.getState();
+        if (state == ArenaState.WAITING || state == ArenaState.EDITING || state == ArenaState.DISABLED) {
+            return;
+        }
+        WaitingMatch waitingMatch = waitingMatches.get(arenaName);
+        RunningMatch runningMatch = runningMatches.get(arenaName);
+        boolean hasWaitingPlayers = waitingMatch != null && !waitingMatch.isEmpty();
+        if (runningMatch != null || hasWaitingPlayers) {
+            return;
+        }
+        plugin.getLogger().warning("Recovered stale arena state for " + arena.getName() + " from " + state + " to WAITING.");
+        forceArenaWaiting(arena);
+    }
+
+    private void normalizeIdleArenaStates() {
+        for (PillarsArena arena : plugin.getArenaManager().getArenas()) {
+            healStaleArenaState(arena);
+        }
+    }
+
+    private void forceArenaWaiting(PillarsArena arena) {
+        if (arena == null) {
+            return;
+        }
         arena.setState(ArenaState.WAITING);
         plugin.getArenaManager().saveArena(arena);
     }
