@@ -29,6 +29,7 @@ import net.enelson.soppillars.placeholder.SopPillarsPlaceholderExpansion;
 import net.enelson.soppillars.rollback.ArenaSnapshotManager;
 import net.enelson.soppillars.stats.PlayerStatisticsManager;
 import net.enelson.soppillars.message.MessageService;
+import org.bstats.bukkit.Metrics;
 import org.bukkit.Bukkit;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.event.EventHandler;
@@ -38,6 +39,7 @@ import org.bukkit.event.server.PluginEnableEvent;
 import org.bukkit.plugin.java.JavaPlugin;
 
 public final class SopPillarsPlugin extends JavaPlugin implements Listener {
+    private static final int BSTATS_PLUGIN_ID = 32798;
 
     private MessageService messageService;
     private PillarsConfig pillarsConfig;
@@ -57,6 +59,7 @@ public final class SopPillarsPlugin extends JavaPlugin implements Listener {
     @Override
     public void onEnable() {
         saveDefaultConfig();
+        startMetricsIfConfigured();
         this.messageService = new MessageService(this);
         this.pillarsConfig = new PillarsConfig(this);
         this.arenaManager = new ArenaManager(this);
@@ -228,5 +231,12 @@ public final class SopPillarsPlugin extends JavaPlugin implements Listener {
 
     public void setPartyBridge(PartyBridge partyBridge) {
         this.partyBridge = partyBridge == null ? new SoloPartyBridge() : partyBridge;
+    }
+
+    private void startMetricsIfConfigured() {
+        if (!getConfig().getBoolean("bstats.enabled", true)) {
+            return;
+        }
+        new Metrics(this, BSTATS_PLUGIN_ID);
     }
 }

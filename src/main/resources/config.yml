@@ -264,3 +264,6 @@ paths:
   kits-folder: "kits"
   snapshots-folder: "snapshots"
   arena-edit-backups-folder: "arena-edit-backups"
+
+bstats:
+  enabled: true
